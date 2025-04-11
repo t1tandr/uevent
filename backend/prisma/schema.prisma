@@ -1,0 +1,187 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  provider  Provider @default(LOCAL)
+
+  events        Event[]         @relation("UserEvents")
+  tickets       Ticket[]
+  companies     CompanyMember[]
+  comments      Comment[]
+  notifications Notification[]
+  Payment       Payment[]
+  subscriptions Subscriber[]
+
+  @@map("user")
+}
+
+enum Provider {
+  LOCAL
+  GOOGLE
+}
+
+model Event {
+  id           String      @id @default(uuid())
+  title        String
+  description  String
+  location     String
+  date         DateTime
+  price        Float
+  maxAttendees Int?        @map("max_attendees")
+  imagesUrls   String[]    @map("images_urls")
+  status       EventStatus @default(PUBLISHED)
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  organizerId String    @map("organizer_id")
+  organizer   User      @relation("UserEvents", fields: [organizerId], references: [id])
+  attendees   Ticket[]
+  comments    Comment[]
+  Company     Company?  @relation(fields: [companyId], references: [id])
+  companyId   String?   @map("company_id")
+  Category    Category? @relation(fields: [categoryId], references: [id])
+  categoryId  String?   @map("category_id")
+
+  @@map("event")
+}
+
+enum EventStatus {
+  HIDDEN
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+model Ticket {
+  id        String   @id @default(uuid())
+  eventId   String   @map("event_id")
+  userId    String   @map("user_id")
+  price     Float
+  createdAt DateTime @default(now()) @map("created_at")
+  qrCode    String?  @map("qr_code")
+
+  event Event @relation(fields: [eventId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@map("ticket")
+}
+
+enum CompanyRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+model CompanyMember {
+  id        String      @id @default(uuid())
+  userId    String
+  companyId String
+  role      CompanyRole
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@unique([userId, companyId])
+  @@map("company_member")
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  location    String
+  description String?
+  logoUrl     String?  @map("logo_url")
+  website     String?
+  phone       String?
+  socialMedia String[]
+  createdAt   DateTime @default(now())
+
+  events      Event[]
+  members     CompanyMember[]
+  subscribers Subscriber[]
+
+  @@map("company")
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  userId    String
+  amount    Float
+  status    PaymentStatus
+  createdAt DateTime      @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("payment")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String
+  eventId   String
+  createdAt DateTime @default(now())
+  parentId  String?  @map("parent_id")
+
+  user    User      @relation(fields: [userId], references: [id])
+  event   Event     @relation(fields: [eventId], references: [id])
+  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  replies Comment[] @relation("CommentReplies")
+
+  @@map("comment")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  message   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notification")
+}
+
+model Subscriber {
+  id        String   @id @default(uuid())
+  userId    String
+  companyId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  company Company @relation(fields: [companyId], references: [id])
+
+  @@map("subscriber")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  events Event[]
+
+  @@map("category")
+}

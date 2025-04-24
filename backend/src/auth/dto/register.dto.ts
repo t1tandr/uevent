@@ -13,4 +13,8 @@ export class RegisterDto {
 		message: 'Password is too short. Minimum length is 6 characters.'
 	})
 	password: string
+
+	@IsOptional()
+	@IsString()
+	avatarUrl: string
 }

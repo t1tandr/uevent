@@ -127,4 +127,27 @@ export class AuthService {
 			sameSite: 'none'
 		})
 	}
+
+	async validateOAuthUser(profile: {
+		provider: string
+		email?: string
+		name?: string
+		avatarUrl?: string
+	}) {
+		let user = await this.userService.getByEmail(profile.email)
+
+		if (!user) {
+			user = await this.userService.createOAuthUser({
+				email: profile.email,
+				name: profile.name,
+				avatarUrl: profile.avatarUrl,
+				password: ''
+			})
+		}
+		const tokens = await this.issueTokens(user.id)
+		return {
+			user,
+			...tokens
+		}
+	}
 }

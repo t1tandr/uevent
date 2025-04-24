@@ -8,14 +8,15 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String?
-  avatarUrl String?  @map("avatar_url")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  provider  Provider @default(LOCAL)
+  id              String   @id @default(uuid())
+  email           String   @unique
+  password        String
+  name            String?
+  avatarUrl       String?  @map("avatar_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  provider        Provider @default(LOCAL)
+  showInAttendees Boolean  @default(true) @map("show_in_attendees")
 
   events        Event[]         @relation("UserEvents")
   tickets       Ticket[]
@@ -33,28 +34,59 @@ enum Provider {
   GOOGLE
 }
 
+enum EventFormat {
+  CONFERENCE
+  WORKSHOP
+  LECTURE
+  FESTIVAL
+  MEETUP
+  OTHER
+}
+
+enum EventTheme {
+  BUSINESS
+  TECHNOLOGY
+  SCIENCE
+  ARTS
+  SPORTS
+  EDUCATION
+  OTHER
+}
+
 model Event {
-  id           String      @id @default(uuid())
-  title        String
-  description  String
-  location     String
-  date         DateTime
-  price        Float
-  maxAttendees Int?        @map("max_attendees")
-  imagesUrls   String[]    @map("images_urls")
-  status       EventStatus @default(PUBLISHED)
-  createdAt    DateTime    @default(now()) @map("created_at")
-  updatedAt    DateTime    @updatedAt @map("updated_at")
+  id                String      @id @default(uuid())
+  title             String
+  description       String
+  location          String
+  date              DateTime
+  price             Float
+  maxAttendees      Int?        @map("max_attendees")
+  imagesUrls        String[]    @map("images_urls")
+  status            EventStatus @default(PUBLISHED)
+  format            EventFormat @default(OTHER)
+  coordinates       String?
+  theme             EventTheme  @default(OTHER)
+  isAttendeesHidden Boolean     @default(false) @map("is_attendees_hidden")
+  redirectUrl       String?     @map("redirect_url")
+  publishDate       DateTime    @default(now()) @map("publish_date")
+  notifyOrganizer   Boolean     @default(false) @map("notify_organizer")
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
-  organizerId String    @map("organizer_id")
-  organizer   User      @relation("UserEvents", fields: [organizerId], references: [id])
-  attendees   Ticket[]
-  comments    Comment[]
-  Company     Company?  @relation(fields: [companyId], references: [id])
-  companyId   String?   @map("company_id")
-  Category    Category? @relation(fields: [categoryId], references: [id])
-  categoryId  String?   @map("category_id")
+  organizerId  String         @map("organizer_id")
+  organizer    User           @relation("UserEvents", fields: [organizerId], references: [id])
+  attendees    Ticket[]
+  comments     Comment[]
+  Company      Company?       @relation(fields: [companyId], references: [id])
+  companyId    String?        @map("company_id")
+  Category     Category?      @relation(fields: [categoryId], references: [id])
+  categoryId   String?        @map("category_id")
+  promoCodes   PromoCode[]
+  Notification Notification[]
 
+  @@index([date])
+  @@index([format, theme])
+  @@index([status])
   @@map("event")
 }
 
@@ -66,18 +98,40 @@ enum EventStatus {
   COMPLETED
 }
 
-model Ticket {
+model PromoCode {
   id        String   @id @default(uuid())
-  eventId   String   @map("event_id")
-  userId    String   @map("user_id")
-  price     Float
+  code      String   @unique
+  discount  Float
+  eventId   String
+  isUsed    Boolean  @default(false) @map("is_used")
   createdAt DateTime @default(now()) @map("created_at")
-  qrCode    String?  @map("qr_code")
 
   event Event @relation(fields: [eventId], references: [id])
-  user  User  @relation(fields: [userId], references: [id])
 
+  @@map("promo_code")
+}
+
+model Ticket {
+  id        String       @id @default(uuid())
+  eventId   String       @map("event_id")
+  userId    String       @map("user_id")
+  price     Float
+  createdAt DateTime     @default(now()) @map("created_at")
+  qrCode    String?      @map("qr_code")
+  status    TicketStatus @default(ACTIVE)
+
+  event   Event     @relation(fields: [eventId], references: [id])
+  user    User      @relation(fields: [userId], references: [id])
+  Payment Payment[]
+
+  @@index([eventId, status])
   @@map("ticket")
+}
+
+enum TicketStatus {
+  ACTIVE
+  USED
+  CANCELLED
 }
 
 enum CompanyRole {
@@ -112,9 +166,10 @@ model Company {
   socialMedia String[]
   createdAt   DateTime @default(now())
 
-  events      Event[]
-  members     CompanyMember[]
-  subscribers Subscriber[]
+  events       Event[]
+  members      CompanyMember[]
+  subscribers  Subscriber[]
+  Notification Notification[]
 
   @@map("company")
 }
@@ -131,8 +186,11 @@ model Payment {
   amount    Float
   status    PaymentStatus
   createdAt DateTime      @default(now())
+  ticketId  String
+  details   Json?
 
-  user User @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+  ticket Ticket @relation(fields: [ticketId], references: [id])
 
   @@map("payment")
 }
@@ -153,14 +211,29 @@ model Comment {
   @@map("comment")
 }
 
+enum NotificationType {
+  EVENT_REMINDER
+  NEW_ATTENDEE
+  ORGANIZER_UPDATE
+  TICKET_PURCHASED
+  COMPANY_UPDATE
+}
+
 model Notification {
-  id        String   @id @default(uuid())
+  id        String           @id @default(uuid())
   message   String
+  type      NotificationType
   userId    String
-  createdAt DateTime @default(now())
+  eventId   String?
+  companyId String?
+  createdAt DateTime         @default(now()) @map("created_at")
+  isRead    Boolean          @default(false) @map("is_read")
 
-  user User @relation(fields: [userId], references: [id])
+  user    User     @relation(fields: [userId], references: [id])
+  event   Event?   @relation(fields: [eventId], references: [id])
+  company Company? @relation(fields: [companyId], references: [id])
 
+  @@index([userId, isRead])
   @@map("notification")
 }
 

@@ -1,19 +1,26 @@
 import {
 	Body,
 	Controller,
+	Get,
 	Post,
 	Req,
 	Res,
-	UnauthorizedException
+	UnauthorizedException,
+	UseGuards
 } from '@nestjs/common'
 import { AuthService } from './auth.service'
 import { LoginDto } from './dto/login.dto'
 import { RegisterDto } from './dto/register.dto'
 import { Request, Response } from 'express'
+import { GoogleAuthGuard } from './guard/google-auth.guard'
+import { ConfigService } from '@nestjs/config'
 
 @Controller('auth')
 export class AuthController {
-	constructor(private readonly authService: AuthService) {}
+	constructor(
+		private readonly authService: AuthService,
+		private readonly configService: ConfigService
+	) {}
 
 	@Post('login')
 	async login(
@@ -24,6 +31,23 @@ export class AuthController {
 		this.authService.addRefreshTokenToResponse(res, refreshToken)
 
 		return response
+	}
+
+	@UseGuards(GoogleAuthGuard)
+	@Get('google/login')
+	googleLogin() {}
+
+	@UseGuards(GoogleAuthGuard)
+	@Get('google/callback')
+	async googleCallback(@Req() req, @Res({ passthrough: true }) res: Response) {
+		const { refreshToken, ...response } = req.user
+		this.authService.addRefreshTokenToResponse(res, refreshToken)
+
+		res.redirect(
+			`${this.configService.get('FRONTEND_URL')}/auth/success?accessToken=${
+				response.accessToken
+			}`
+		)
 	}
 
 	@Post('register')

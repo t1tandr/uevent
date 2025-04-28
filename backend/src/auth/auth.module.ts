@@ -8,10 +8,12 @@ import { JwtModule } from '@nestjs/jwt'
 import { getJwtConfig } from 'src/config/jwt.config'
 import googleOauthConfig from './config/google-oauth.config'
 import { GoogleStrategy } from './strategy/google.strategy'
+import { S3Module } from 'src/s3/s3.module'
 
 @Module({
 	imports: [
 		UserModule,
+		S3Module,
 		ConfigModule,
 		JwtModule.registerAsync({
 			imports: [ConfigModule],

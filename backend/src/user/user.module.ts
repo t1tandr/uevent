@@ -5,7 +5,8 @@ import { PrismaService } from 'src/prisma.service'
 import { S3Module } from 'src/s3/s3.module'
 
 @Module({
-	controllers: [UserController, S3Module],
+	imports: [S3Module],
+	controllers: [UserController],
 	providers: [UserService, PrismaService],
 	exports: [UserService]
 })

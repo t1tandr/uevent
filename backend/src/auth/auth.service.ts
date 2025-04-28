@@ -141,7 +141,7 @@ export class AuthService {
 				email: profile.email,
 				name: profile.name,
 				avatarUrl: profile.avatarUrl,
-				password: ''
+				provider: 'GOOGLE'
 			})
 		}
 		const tokens = await this.issueTokens(user.id)

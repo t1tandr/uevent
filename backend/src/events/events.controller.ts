@@ -15,21 +15,28 @@ import {
 	DefaultValuePipe,
 	ParseIntPipe,
 	ParseFloatPipe,
-	ForbiddenException
+	ForbiddenException,
+	UseGuards
 } from '@nestjs/common'
 import { FilesInterceptor } from '@nestjs/platform-express'
 import { EventsService } from './services/events.service'
 import { CreateEventDto } from './dto/create-event.dto'
-import { AuthGuard } from '../auth/decorators/auth.decorator'
 import { CurrentUser } from '../auth/decorators/user.decorator'
 import { EventFilters, SearchOptions } from './types/event.types'
+import { CompanyRoleGuard } from 'src/companies/guards/company-role.guard'
+import { CompanyRoles } from 'src/companies/decorators/company-role.decorator'
+import { CompanyRole, TicketStatus } from '@prisma/client'
+import { EventAttendeeService } from './services/event-atendee.service'
+import { JwtAuthGuard } from 'src/auth/guard/jwt.guard'
 
 @Controller('events')
 export class EventsController {
-	constructor(private readonly eventsService: EventsService) {}
-
+	constructor(
+		private readonly eventsService: EventsService,
+		private readonly attendeeService: EventAttendeeService
+	) {}
 	@Post()
-	@AuthGuard()
+	@UseGuards(JwtAuthGuard)
 	@UseInterceptors(FilesInterceptor('images', 10))
 	async create(
 		@CurrentUser('id') userId: string,
@@ -67,7 +74,6 @@ export class EventsController {
 			priceMax,
 			category
 		}
-
 		return this.eventsService.findAll(filters)
 	}
 
@@ -96,14 +102,12 @@ export class EventsController {
 			category,
 			location
 		}
-
 		const options: SearchOptions = {
 			page,
 			limit,
 			sortBy: sortBy as 'date' | 'price' | 'popularity',
 			sortOrder: sortOrder as 'asc' | 'desc'
 		}
-
 		return this.eventsService.searchEvents(filters, options)
 	}
 
@@ -111,9 +115,8 @@ export class EventsController {
 	async findOne(@Param('id') id: string) {
 		return this.eventsService.findOne(id)
 	}
-
 	@Put(':id/images')
-	@AuthGuard()
+	@UseGuards(JwtAuthGuard)
 	@UseInterceptors(FilesInterceptor('images', 10))
 	async updateImages(
 		@Param('id') eventId: string,
@@ -134,12 +137,10 @@ export class EventsController {
 		if (event.organizer.id !== userId) {
 			throw new ForbiddenException('Only event organizer can update images')
 		}
-
 		return this.eventsService.updateEventImages(eventId, files, imagesToDelete)
 	}
-
 	@Delete(':id/images')
-	@AuthGuard()
+	@UseGuards(JwtAuthGuard)
 	async deleteImages(
 		@Param('id') eventId: string,
 		@CurrentUser('id') userId: string,
@@ -150,7 +151,25 @@ export class EventsController {
 		if (event.organizer.id !== userId) {
 			throw new ForbiddenException('Only event organizer can delete images')
 		}
-
 		return this.eventsService.updateEventImages(eventId, [], imageUrls)
+	}
+	@Get(':eventId/attendees')
+	@UseGuards(JwtAuthGuard, CompanyRoleGuard)
+	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
+	async getEventAttendees(
+		@Param('eventId') eventId: string,
+		@Query('status') status?: TicketStatus,
+		@Query('search') searchTerm?: string
+	) {
+		return this.attendeeService.getEventAttendees(eventId, {
+			status,
+			searchTerm
+		})
+	}
+	@Get(':eventId/attendees/statistics')
+	@UseGuards(JwtAuthGuard, CompanyRoleGuard)
+	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
+	async getAttendeesStatistics(@Param('eventId') eventId: string) {
+		return this.attendeeService.getAttendeesStatistics(eventId)
 	}
 }

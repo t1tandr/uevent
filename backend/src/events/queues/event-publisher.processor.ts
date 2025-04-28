@@ -1,6 +1,5 @@
 import { Process, Processor } from '@nestjs/bull'
 import { Job } from 'bull'
-// import { PrismaService } from '../../prisma/prisma.service'
 import { EventStatus } from '@prisma/client'
 import { MailService } from '../../mail/mail.service'
 import { PrismaService } from 'src/prisma.service'

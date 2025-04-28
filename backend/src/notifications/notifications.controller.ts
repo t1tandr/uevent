@@ -1,18 +1,19 @@
-import { Controller, Get, Param, Put, UseGuards } from '@nestjs/common'
+import { Controller, Get, Param, Put } from '@nestjs/common'
 import { NotificationsService } from './notifications.service'
-import { AuthGuard } from '../auth/decorators/auth.decorator'
 import { CurrentUser } from '../auth/decorators/user.decorator'
+import { AuthGuard } from 'src/auth/decorators/auth.decorator'
 
 @Controller('notifications')
-@UseGuards(AuthGuard)
 export class NotificationsController {
 	constructor(private readonly notificationsService: NotificationsService) {}
 
+	@AuthGuard()
 	@Get()
 	async getUserNotifications(@CurrentUser('id') userId: string) {
 		return this.notificationsService.getUserNotifications(userId)
 	}
 
+	@AuthGuard()
 	@Put(':id/read')
 	async markAsRead(
 		@CurrentUser('id') userId: string,
@@ -21,6 +22,7 @@ export class NotificationsController {
 		return this.notificationsService.markAsRead(userId, notificationId)
 	}
 
+	@AuthGuard()
 	@Put('read-all')
 	async markAllAsRead(@CurrentUser('id') userId: string) {
 		return this.notificationsService.markAllAsRead(userId)

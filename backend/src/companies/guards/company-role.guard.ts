@@ -23,16 +23,41 @@ export class CompanyRoleGuard implements CanActivate {
 		const request = context.switchToHttp().getRequest()
 		const userId = request.user.id
 		const companyId = request.params.id
+		const eventId = request.params.eventId
 
-		const member = await this.prisma.companyMember.findFirst({
-			where: {
-				userId,
-				companyId
-			}
-		})
+		// If we have eventId, we need to get the company through the event
+		if (eventId) {
+			const event = await this.prisma.event.findUnique({
+				where: { id: eventId },
+				select: { companyId: true }
+			})
 
-		if (!member) return false
+			if (!event) return false
 
-		return requiredRoles.includes(member.role)
+			const member = await this.prisma.companyMember.findFirst({
+				where: {
+					userId,
+					companyId: event.companyId
+				}
+			})
+
+			if (!member) return false
+			return requiredRoles.includes(member.role)
+		}
+
+		// Regular company route check
+		if (companyId) {
+			const member = await this.prisma.companyMember.findFirst({
+				where: {
+					userId,
+					companyId
+				}
+			})
+
+			if (!member) return false
+			return requiredRoles.includes(member.role)
+		}
+
+		return false
 	}
 }

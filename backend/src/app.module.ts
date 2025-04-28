@@ -7,7 +7,7 @@ import { EventsModule } from './events/events.module'
 import { CompaniesModule } from './companies/companies.module'
 import { MailModule } from './mail/mail.module'
 import { BullModule } from '@nestjs/bull'
-import { NotificationsModule } from './notifications/notifications.module';
+import { NotificationsModule } from './notifications/notifications.module'
 
 @Module({
 	imports: [

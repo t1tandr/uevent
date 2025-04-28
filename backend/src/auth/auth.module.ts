@@ -9,6 +9,7 @@ import { getJwtConfig } from 'src/config/jwt.config'
 import googleOauthConfig from './config/google-oauth.config'
 import { GoogleStrategy } from './strategy/google.strategy'
 import { S3Module } from 'src/s3/s3.module'
+import { PrismaService } from 'src/prisma.service'
 
 @Module({
 	imports: [
@@ -23,6 +24,6 @@ import { S3Module } from 'src/s3/s3.module'
 		ConfigModule.forFeature(googleOauthConfig)
 	],
 	controllers: [AuthController],
-	providers: [AuthService, JwtStrategy, GoogleStrategy]
+	providers: [AuthService, JwtStrategy, GoogleStrategy, PrismaService]
 })
 export class AuthModule {}

@@ -15,7 +15,6 @@ import {
 	DefaultValuePipe,
 	ParseIntPipe,
 	ParseFloatPipe,
-	ForbiddenException,
 	UseGuards
 } from '@nestjs/common'
 import { FilesInterceptor } from '@nestjs/platform-express'
@@ -23,8 +22,6 @@ import { EventsService } from './services/events.service'
 import { CreateEventDto } from './dto/create-event.dto'
 import { CurrentUser } from '../auth/decorators/user.decorator'
 import { EventFilters, SearchOptions } from './types/event.types'
-import { CompanyRoleGuard } from 'src/companies/guards/company-role.guard'
-import { CompanyRoles } from 'src/companies/decorators/company-role.decorator'
 import { CompanyRole, TicketStatus } from '@prisma/client'
 import { EventAttendeeService } from './services/event-atendee.service'
 import { JwtAuthGuard } from 'src/auth/guard/jwt.guard'
@@ -35,6 +32,7 @@ export class EventsController {
 		private readonly eventsService: EventsService,
 		private readonly attendeeService: EventAttendeeService
 	) {}
+
 	@Post()
 	@UseGuards(JwtAuthGuard)
 	@UseInterceptors(FilesInterceptor('images', 10))
@@ -44,7 +42,7 @@ export class EventsController {
 		@UploadedFiles(
 			new ParseFilePipe({
 				validators: [
-					new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }), // 5MB
+					new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
 					new FileTypeValidator({ fileType: 'image/jpeg|image/png|image/webp' })
 				],
 				fileIsRequired: false
@@ -115,6 +113,7 @@ export class EventsController {
 	async findOne(@Param('id') id: string) {
 		return this.eventsService.findOne(id)
 	}
+
 	@Put(':id/images')
 	@UseGuards(JwtAuthGuard)
 	@UseInterceptors(FilesInterceptor('images', 10))
@@ -133,12 +132,10 @@ export class EventsController {
 		files: Express.Multer.File[],
 		@Body('imagesToDelete') imagesToDelete?: string[]
 	) {
-		const event = await this.eventsService.findOne(eventId)
-		if (event.organizer.id !== userId) {
-			throw new ForbiddenException('Only event organizer can update images')
-		}
+		await this.eventsService.checkEventAccess(eventId, userId, [])
 		return this.eventsService.updateEventImages(eventId, files, imagesToDelete)
 	}
+
 	@Delete(':id/images')
 	@UseGuards(JwtAuthGuard)
 	async deleteImages(
@@ -146,30 +143,41 @@ export class EventsController {
 		@CurrentUser('id') userId: string,
 		@Body('imageUrls') imageUrls: string[]
 	) {
-		// Check if user is event organizer
-		const event = await this.eventsService.findOne(eventId)
-		if (event.organizer.id !== userId) {
-			throw new ForbiddenException('Only event organizer can delete images')
-		}
+		await this.eventsService.checkEventAccess(eventId, userId, [
+			CompanyRole.OWNER,
+			CompanyRole.EDITOR
+		])
 		return this.eventsService.updateEventImages(eventId, [], imageUrls)
 	}
+
 	@Get(':eventId/attendees')
-	@UseGuards(JwtAuthGuard, CompanyRoleGuard)
-	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
+	@UseGuards(JwtAuthGuard)
 	async getEventAttendees(
 		@Param('eventId') eventId: string,
+		@CurrentUser('id') userId: string,
 		@Query('status') status?: TicketStatus,
 		@Query('search') searchTerm?: string
 	) {
+		await this.eventsService.checkEventAccess(eventId, userId, [
+			CompanyRole.OWNER,
+			CompanyRole.EDITOR
+		])
 		return this.attendeeService.getEventAttendees(eventId, {
 			status,
 			searchTerm
 		})
 	}
+
 	@Get(':eventId/attendees/statistics')
-	@UseGuards(JwtAuthGuard, CompanyRoleGuard)
-	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
-	async getAttendeesStatistics(@Param('eventId') eventId: string) {
+	@UseGuards(JwtAuthGuard)
+	async getAttendeesStatistics(
+		@Param('eventId') eventId: string,
+		@CurrentUser('id') userId: string
+	) {
+		await this.eventsService.checkEventAccess(eventId, userId, [
+			CompanyRole.OWNER,
+			CompanyRole.EDITOR
+		])
 		return this.attendeeService.getAttendeesStatistics(eventId)
 	}
 }

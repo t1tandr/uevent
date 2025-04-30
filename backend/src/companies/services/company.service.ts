@@ -20,6 +20,25 @@ export class CompaniesService {
 		private s3Service: S3Service
 	) {}
 
+	async checkUserRole(
+		companyId: string,
+		userId: string,
+		allowedRoles: CompanyRole[]
+	) {
+		const member = await this.prisma.companyMember.findFirst({
+			where: {
+				companyId,
+				userId
+			}
+		})
+
+		if (!member || !allowedRoles.includes(member.role)) {
+			throw new ForbiddenException('Insufficient permissions')
+		}
+
+		return member
+	}
+
 	async getCompanyEvents(
 		companyId: string,
 		options?: { status?: EventStatus; search?: string }
@@ -333,24 +352,5 @@ export class CompaniesService {
 				}
 			}
 		})
-	}
-
-	private async checkUserRole(
-		companyId: string,
-		userId: string,
-		allowedRoles: CompanyRole[]
-	) {
-		const member = await this.prisma.companyMember.findFirst({
-			where: {
-				companyId,
-				userId
-			}
-		})
-
-		if (!member || !allowedRoles.includes(member.role)) {
-			throw new ForbiddenException('Insufficient permissions')
-		}
-
-		return member
 	}
 }

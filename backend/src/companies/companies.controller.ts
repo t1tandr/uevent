@@ -11,7 +11,6 @@ import {
 	Post,
 	Query,
 	UploadedFile,
-	UseGuards,
 	UseInterceptors
 } from '@nestjs/common'
 import { CompaniesService } from './services/company.service'
@@ -19,10 +18,8 @@ import { CompanySubscribersService } from './services/company-subscribers.servic
 import { FileInterceptor } from '@nestjs/platform-express'
 import { CompanyRole, EventStatus } from '@prisma/client'
 import { CurrentUser } from 'src/auth/decorators/user.decorator'
-import { CompanyRoles } from './decorators/company-role.decorator'
 import { AddMemberDto } from './dto/add-member.dto'
 import { UpdateCompanyDto } from './dto/update-company.dto'
-import { CompanyRoleGuard } from './guards/company-role.guard'
 import { AuthGuard } from 'src/auth/decorators/auth.decorator'
 import { CompanyMembersService } from './services/company-member.service'
 import { CreateCompanyDto } from './dto/create-company.dto'
@@ -77,8 +74,6 @@ export class CompaniesController {
 
 	@Get(':id/subscribers')
 	@AuthGuard()
-	@UseGuards(CompanyRoleGuard)
-	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
 	async getCompanySubscribers(@Param('id') companyId: string) {
 		return this.subscribersService.getSubscribers(companyId)
 	}
@@ -95,16 +90,12 @@ export class CompaniesController {
 
 	@Post(':id/members')
 	@AuthGuard()
-	// @UseGuards(CompanyRoleGuard)
-	// @CompanyRoles(CompanyRole.OWNER)
 	addMember(@Param('id') id: string, @Body() dto: AddMemberDto) {
 		return this.membersService.addMember(id, dto)
 	}
 
 	@Patch(':id/members/:memberId')
 	@AuthGuard()
-	@UseGuards(CompanyRoleGuard)
-	@CompanyRoles(CompanyRole.OWNER)
 	updateMemberRole(
 		@Param('memberId') memberId: string,
 		@Body('role') role: CompanyRole
@@ -114,8 +105,6 @@ export class CompaniesController {
 
 	@Patch(':id')
 	@AuthGuard()
-	@UseGuards(CompanyRoleGuard)
-	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
 	update(
 		@Param('id') id: string,
 		@Body() dto: UpdateCompanyDto,
@@ -126,8 +115,6 @@ export class CompaniesController {
 
 	@Post(':id/logo')
 	@AuthGuard()
-	@UseGuards(CompanyRoleGuard)
-	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
 	@UseInterceptors(FileInterceptor('file'))
 	updateLogo(
 		@CurrentUser('id') userId: string,
@@ -157,6 +144,3 @@ export class CompaniesController {
 		return this.subscribersService.unsubscribe(id, userId)
 	}
 }
-//TODO get company events
-//TODO get company members
-//TODO get company subscribers

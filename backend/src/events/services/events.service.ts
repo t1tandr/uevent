@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+	ForbiddenException,
+	Injectable,
+	NotFoundException
+} from '@nestjs/common'
 import { S3Service } from '../../s3/s3.service'
 // import { NotificationService } from '../../notification/notification.service'
 import { CreateEventDto } from '../dto/create-event.dto'
@@ -11,6 +15,7 @@ import {
 import { PrismaService } from 'src/prisma.service'
 import { EventPublisherService } from '../queues/event-publisher.service'
 import { NotificationsService } from 'src/notifications/notifications.service'
+import { CompanyRole } from '@prisma/client'
 
 @Injectable()
 export class EventsService {
@@ -20,6 +25,36 @@ export class EventsService {
 		private eventPublisherService: EventPublisherService,
 		private notificationService: NotificationsService
 	) {}
+
+	async checkEventAccess(
+		eventId: string,
+		userId: string,
+		allowedRoles: CompanyRole[]
+	) {
+		const event = await this.prisma.event.findUnique({
+			where: { id: eventId },
+			include: {
+				Company: {
+					include: {
+						members: {
+							where: { userId }
+						}
+					}
+				}
+			}
+		})
+
+		if (!event) {
+			throw new NotFoundException('Event not found')
+		}
+
+		const member = event.Company.members[0]
+		if (!member || !allowedRoles.includes(member.role)) {
+			throw new ForbiddenException('Insufficient permissions')
+		}
+
+		return event
+	}
 
 	async uploadEventImages(files: Express.Multer.File[]): Promise<string[]> {
 		return this.s3Service.uploadMultipleFiles(files, 'events')

@@ -17,6 +17,9 @@ const schema = z.object({
 
 export default function Login() {
   const { err, setErr } = React.useState(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const navigate = useNavigate();
   const { register, handleSubmit, formState: { errors, isValid } } = useForm({
     defaultValues: {
       name: "",
@@ -140,16 +143,14 @@ export default function Login() {
 
               <div className="flex flex-col items-center justify-between">
                 <Link
-                  to="/register"
+                  href="/register"
                   className="text-primary"
-                  onClick={(e) => isLoading && e.preventDefault()}
                 >
                   Don't have an account? Sign up
                 </Link>
                 <Link
-                  to="/forgot-password"
+                  href="/forgot-password"
                   className="text-black dark:text-white"
-                  onClick={(e) => isLoading && e.preventDefault()}
                 >
                   Forgot password?
                 </Link>
@@ -158,21 +159,19 @@ export default function Login() {
           </div>
 
           <div className="hidden lg:flex w-1/2 items-center justify-center">
-            <div className="hidden lg:flex w-1/2 items-center justify-center">
-              <div className="w-2/3 bg-gray-200 dark:bg-black bg-opacity-50 dark:bg-opacity-50 rounded-lg p-10">
-                <p className="text-6xl xl:text-8xl font-extrabold text-primary font-open">
-                  Uevent
-                </p>
-                <p className="text-black dark:text-white">
-                  Find interesting events
-                </p>
-                <p className="text-black dark:text-white">
-                  Find out which friends are attending them
-                </p>
-                <p className="text-black dark:text-white">
-                  Connect with like-minded people
-                </p>
-              </div>
+            <div className="w-2/3 bg-gray-200 dark:bg-black bg-opacity-50 dark:bg-opacity-50 rounded-lg p-10">
+              <p className="text-6xl xl:text-8xl font-extrabold text-primary font-open">
+                Uevent
+              </p>
+              <p className="text-black dark:text-white">
+                Find interesting events
+              </p>
+              <p className="text-black dark:text-white">
+                Find out which friends are attending them
+              </p>
+              <p className="text-black dark:text-white">
+                Connect with like-minded people
+              </p>
             </div>
           </div>
         </motion.div>

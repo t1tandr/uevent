@@ -7,38 +7,88 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import IconGoogle from "../icons/icons8-google.svg?react";
+import { authService } from "../services/auth.service";
+import { useNavigate } from "react-router-dom";
 
-const schema = z.object({
-  name: z.string().min(1, 'Name must be at least 1 character long'),
-  email: z.string().email('Invalid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters long'),
-  passwordConfirmation: z.string().min(6, 'Password confirmation must be at least 6 characters long'),
-}).refine((data) => data.password === data.passwordConfirmation, {
-  message: "Passwords do not match",
-  path: ["passwordConfirmation"],
-});
+const schema = z
+  .object({
+    name: z.string().min(1, "Name must be at least 1 character long"),
+    email: z.string().email("Invalid email"),
+    password: z.string().min(6, "Password must be at least 6 characters long"),
+    passwordConfirmation: z.string(),
+  })
+  .refine((data) => data.password === data.passwordConfirmation, {
+    message: "Passwords do not match",
+    path: ["passwordConfirmation"],
+  });
 
+export default function Register() {
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState(null);
+  const navigate = useNavigate();
 
-export default function Login() {
-  const { err, setErr } = React.useState(null);
-  const { register, handleSubmit, formState: { errors, isValid } } = useForm({
-    value: {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm({
+    defaultValues: {
       name: "",
       email: "",
       password: "",
       passwordConfirmation: "",
     },
-    resolver: zodResolver(schema, { mode: "all", abortEarly: false }),
+    resolver: zodResolver(schema),
     mode: "onChange",
   });
 
-  const onSubmit = (data) => {
-    console.log(data);
+  const onSubmit = async (data) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Remove passwordConfirmation before sending to API
+      const { passwordConfirmation, ...registerData } = data;
+
+      await authService.register(registerData);
+      navigate("/");
+    } catch (err) {
+      setError(
+        err?.response?.data?.message || "Registration failed. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = 'http://localhost:3000/api/auth/google/login';
+    const redirectUri = encodeURIComponent(
+      "http://localhost:3000/api/auth/google/callback"
+    );
+    window.location.href = `http://localhost:3000/api/auth/google/login?redirect_uri=${redirectUri}`;
   };
+
+  // Handle Google OAuth callback
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get("accessToken");
+
+    if (accessToken) {
+      const handleGoogleCallback = async () => {
+        try {
+          setIsLoading(true);
+          await authService.googleAuth(accessToken);
+          navigate("/");
+        } catch (err) {
+          setError("Google sign up failed. Please try again.");
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      handleGoogleCallback();
+    }
+  }, [navigate]);
 
   return (
     <AuroraBackground>
@@ -51,29 +101,31 @@ export default function Login() {
             delay: 0.3,
             duration: 0.8,
             ease: "easeInOut",
-          }}>
+          }}
+        >
           <div className="md:w-1/2 items-center justify-center flex">
             <div className="flex flex-col bg-gray-200 dark:bg-black gap-10 bg-opacity-50 dark:bg-opacity-50 rounded-lg lg:w-2/3 p-10 w-full">
               <h1 className="text-4xl font-bold text-center text-default-900">
-                Sing up
+                Sign up
               </h1>
               <Form
                 className="mx-auto w-full gap-5"
                 validationErrors={errors}
-                onSubmit={handleSubmit(onSubmit)}>
-
+                onSubmit={handleSubmit(onSubmit)}
+              >
                 <Input
-                  {...register("name", { required: "Name is required" })}
+                  {...register("name")}
                   isRequired
                   errorMessage={errors.name?.message}
                   isInvalid={!!errors.name}
                   label="Name"
                   name="name"
                   placeholder="Enter your name"
+                  disabled={isLoading}
                 />
 
                 <Input
-                  {...register("email", { required: "Email is required" })}
+                  {...register("email")}
                   isRequired
                   errorMessage={errors.email?.message}
                   isInvalid={!!errors.email}
@@ -81,10 +133,11 @@ export default function Login() {
                   name="email"
                   placeholder="Enter your email"
                   type="email"
+                  disabled={isLoading}
                 />
 
                 <Input
-                  {...register("password", { required: "Password is required" })}
+                  {...register("password")}
                   isRequired
                   errorMessage={errors.password?.message}
                   isInvalid={!!errors.password}
@@ -92,46 +145,74 @@ export default function Login() {
                   name="password"
                   placeholder="Enter your password"
                   type="password"
+                  disabled={isLoading}
                 />
 
                 <Input
-                  {...register("passwordConfirmation", { required: "Password confirmation is required" })}
+                  {...register("passwordConfirmation")}
                   isRequired
                   errorMessage={errors.passwordConfirmation?.message}
                   isInvalid={!!errors.passwordConfirmation}
-                  label="Password confirmation"
+                  label="Confirm Password"
                   name="passwordConfirmation"
-                  placeholder="Enter password confirmation"
+                  placeholder="Confirm your password"
                   type="password"
+                  disabled={isLoading}
                 />
 
-                {err && <p className="text-red-500">{err}</p>}
+                {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+
                 <div className="flex flex-col gap-4 w-full">
-                  <Button className="w-full" color="primary" type="submit" isDisabled={!isValid}>
-                    Sign up
+                  <Button
+                    className="w-full"
+                    color="primary"
+                    type="submit"
+                    isDisabled={!isValid || isLoading}
+                    isLoading={isLoading}
+                  >
+                    {isLoading ? "Signing up..." : "Sign up"}
                   </Button>
-                  <Button onPress={handleGoogleLogin} startContent={<IconGoogle />} className="google-login-button bg-blue-700 color-white">
-                    Sing up with Google
+                  <Button
+                    onPress={handleGoogleLogin}
+                    startContent={<IconGoogle />}
+                    className="google-login-button bg-blue-700 color-white"
+                    isDisabled={isLoading}
+                  >
+                    Sign up with Google
                   </Button>
                 </div>
               </Form>
+
               <div className="flex flex-col items-center justify-between">
-                <Link href="/login" className="text-primary">Already have an account? Log in</Link>
-                <Link href="#" className="text-black dark:text-white">Forgot password?</Link>
+                <Link
+                  to="/login"
+                  className="text-primary"
+                  onClick={(e) => isLoading && e.preventDefault()}
+                >
+                  Already have an account? Log in
+                </Link>
               </div>
             </div>
-
           </div>
+
           <div className="hidden lg:flex w-1/2 items-center justify-center">
             <div className="w-2/3 bg-gray-200 dark:bg-black bg-opacity-50 dark:bg-opacity-50 rounded-lg p-10">
-              <p className="text-6xl xl:text-8xl font-extrabold text-primary font-open">Uevent</p>
-              <p className="text-black dark:text-white">Find interesting events</p>
-              <p className="text-black dark:text-white">Find out which friends are attending them</p>
-              <p className="text-black dark:text-white">Connect with like-minded people</p>
+              <p className="text-6xl xl:text-8xl font-extrabold text-primary font-open">
+                Uevent
+              </p>
+              <p className="text-black dark:text-white">
+                Find interesting events
+              </p>
+              <p className="text-black dark:text-white">
+                Find out which friends are attending them
+              </p>
+              <p className="text-black dark:text-white">
+                Connect with like-minded people
+              </p>
             </div>
           </div>
         </motion.div>
       </LogLayout>
-    </AuroraBackground >
+    </AuroraBackground>
   );
 }

@@ -20,7 +20,11 @@ export default function Login() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
   const navigate = useNavigate();
-  const { register, handleSubmit, formState: { errors, isValid } } = useForm({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isValid },
+  } = useForm({
     defaultValues: {
       name: "",
       email: "",
@@ -35,7 +39,7 @@ export default function Login() {
       setIsLoading(true);
       setError(null);
       await authService.login(data);
-      navigate("/"); // Redirect to home page after successful login
+      navigate("/");
     } catch (err) {
       setError(
         err?.response?.data?.message || "Login failed. Please try again."
@@ -142,10 +146,7 @@ export default function Login() {
               </Form>
 
               <div className="flex flex-col items-center justify-between">
-                <Link
-                  href="/register"
-                  className="text-primary"
-                >
+                <Link href="/register" className="text-primary">
                   Don't have an account? Sign up
                 </Link>
                 <Link

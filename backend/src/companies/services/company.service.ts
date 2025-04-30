@@ -12,12 +12,14 @@ import { CreateCompanyDto } from '../dto/create-company.dto'
 import { UpdateCompanyDto } from '../dto/update-company.dto'
 import { AddMemberDto } from '../dto/add-member.dto'
 import { CompanyDetails, CompanyMemberDetails } from '../types/company.types'
+import { MailService } from 'src/mail/mail.service'
 
 @Injectable()
 export class CompaniesService {
 	constructor(
 		private prisma: PrismaService,
-		private s3Service: S3Service
+		private s3Service: S3Service,
+		private mailService: MailService
 	) {}
 
 	async checkUserRole(
@@ -219,6 +221,10 @@ export class CompaniesService {
 
 		if (!user) throw new NotFoundException('User not found')
 
+		const company = await this.prisma.company.findUnique({
+			where: { id: companyId }
+		})
+
 		const existingMember = await this.prisma.companyMember.findFirst({
 			where: {
 				companyId,
@@ -230,7 +236,7 @@ export class CompaniesService {
 			throw new BadRequestException('User is already a member')
 		}
 
-		return this.prisma.companyMember.create({
+		const member = this.prisma.companyMember.create({
 			data: {
 				companyId,
 				userId: user.id,
@@ -247,6 +253,10 @@ export class CompaniesService {
 				}
 			}
 		})
+
+		await this.mailService.sendCompanyInvitation(user, company, dto.role)
+
+		return member
 	}
 
 	async updateMemberRole(
@@ -270,20 +280,27 @@ export class CompaniesService {
 			throw new ForbiddenException('Cannot change owner role')
 		}
 
-		return this.prisma.companyMember.update({
-			where: { id: memberId },
+		const updatedMember = await this.prisma.companyMember.update({
+			where: {
+				userId_companyId: {
+					userId: memberId,
+					companyId
+				}
+			},
 			data: { role: newRole },
 			include: {
-				user: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						avatarUrl: true
-					}
-				}
+				user: true,
+				company: true
 			}
 		})
+
+		await this.mailService.sendCompanyRoleUpdate(
+			updatedMember.user,
+			updatedMember.company,
+			newRole
+		)
+
+		return updatedMember
 	}
 
 	async removeMember(companyId: string, memberId: string, requesterId: string) {

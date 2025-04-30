@@ -15,7 +15,8 @@ import {
 import { PrismaService } from 'src/prisma.service'
 import { EventPublisherService } from '../queues/event-publisher.service'
 import { NotificationsService } from 'src/notifications/notifications.service'
-import { CompanyRole } from '@prisma/client'
+import { CompanyRole, EventStatus } from '@prisma/client'
+import { MailService } from 'src/mail/mail.service'
 
 @Injectable()
 export class EventsService {
@@ -23,7 +24,8 @@ export class EventsService {
 		private prisma: PrismaService,
 		private s3Service: S3Service,
 		private eventPublisherService: EventPublisherService,
-		private notificationService: NotificationsService
+		private notificationService: NotificationsService,
+		private mailService: MailService
 	) {}
 
 	async checkEventAccess(
@@ -392,5 +394,28 @@ export class EventsService {
 		}
 
 		return sortQuery
+	}
+
+	async cancelEvent(eventId: string) {
+		const event = await this.prisma.event.update({
+			where: { id: eventId },
+			data: { status: EventStatus.CANCELLED },
+			include: {
+				attendees: {
+					include: {
+						user: true
+					}
+				}
+			}
+		})
+
+		// Send cancellation emails
+		await Promise.all(
+			event.attendees.map(attendee =>
+				this.mailService.sendEventCancellation(attendee.user, event)
+			)
+		)
+
+		return event
 	}
 }

@@ -14,8 +14,6 @@ import { RegisterDto } from './dto/register.dto'
 import { Request, Response } from 'express'
 import { GoogleAuthGuard } from './guard/google-auth.guard'
 import { ConfigService } from '@nestjs/config'
-import { AuthGuard } from './decorators/auth.decorator'
-import { CurrentUser } from './decorators/user.decorator'
 
 @Controller('auth')
 export class AuthController {
@@ -23,13 +21,6 @@ export class AuthController {
 		private readonly authService: AuthService,
 		private readonly configService: ConfigService
 	) {}
-
-	@Get('me')
-	@AuthGuard()
-	async getMe(@CurrentUser('id') userId: string) {
-		console.log('Current user ID:', userId)
-	}
-
 	@Post('login')
 	async login(
 		@Body() dto: LoginDto,

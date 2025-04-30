@@ -38,6 +38,12 @@ export class EventsController {
 		private readonly promoCodeService: PromoCodeService
 	) {}
 
+	@Get('user')
+	@UseGuards(JwtAuthGuard)
+	async getMyEvents(@CurrentUser('id') userId: string) {
+		return this.eventsService.getMyEvents(userId)
+	}
+
 	@Post()
 	@UseGuards(JwtAuthGuard)
 	@UseInterceptors(FilesInterceptor('images', 10))

@@ -32,6 +32,18 @@ export class CompaniesController {
 		private readonly subscribersService: CompanySubscribersService
 	) {}
 
+	@Get('me')
+	@AuthGuard()
+	async getMyCompanies(@CurrentUser('id') userId: string) {
+		return this.companiesService.getMyCompanies(userId)
+	}
+
+	@Get('me/subscribed')
+	@AuthGuard()
+	async getMySubscribedCompanies(@CurrentUser('id') userId: string) {
+		return this.companiesService.getMySubscribedCompanies(userId)
+	}
+
 	@Post()
 	@AuthGuard()
 	@UseInterceptors(FileInterceptor('logo'))

@@ -22,6 +22,45 @@ export class CompaniesService {
 		private mailService: MailService
 	) {}
 
+	async getMyCompanies(userId: string) {
+		return this.prisma.companyMember.findMany({
+			where: {
+				userId,
+				role: {
+					in: [CompanyRole.OWNER, CompanyRole.EDITOR, CompanyRole.VIEWER]
+				}
+			},
+			include: {
+				company: {
+					include: {
+						_count: {
+							select: {
+								subscribers: true
+							}
+						}
+					}
+				}
+			}
+		})
+	}
+
+	async getMySubscribedCompanies(userId: string) {
+		return this.prisma.subscriber.findMany({
+			where: { userId },
+			include: {
+				company: {
+					include: {
+						_count: {
+							select: {
+								subscribers: true
+							}
+						}
+					}
+				}
+			}
+		})
+	}
+
 	async checkUserRole(
 		companyId: string,
 		userId: string,

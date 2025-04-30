@@ -22,6 +22,16 @@ export class TicketsService {
 		private mailService: MailService
 	) {}
 
+	async getTickets(userId: string): Promise<Ticket[]> {
+		return this.prisma.ticket.findMany({
+			where: { userId },
+			include: {
+				event: true,
+				user: true
+			}
+		})
+	}
+
 	async createTicket(
 		userId: string,
 		eventId: string,

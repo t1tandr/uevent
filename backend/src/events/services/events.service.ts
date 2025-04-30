@@ -29,6 +29,31 @@ export class EventsService {
 		private mailService: MailService
 	) {}
 
+	async getMyEvents(userId: string) {
+		const events = await this.prisma.event.findMany({
+			where: {
+				OR: [
+					{ organizerId: userId },
+					{
+						attendees: {
+							some: { userId }
+						}
+					}
+				]
+			},
+			include: {
+				organizer: true,
+				Category: true,
+				Company: true
+			},
+			orderBy: {
+				date: 'asc'
+			}
+		})
+
+		return events || []
+	}
+
 	async checkEventAccess(
 		eventId: string,
 		userId: string,

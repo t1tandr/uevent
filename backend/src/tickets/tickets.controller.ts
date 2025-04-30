@@ -26,6 +26,12 @@ export class TicketsController {
 		return this.ticketsService.createTicket(userId, dto.eventId, dto.promoCode)
 	}
 
+	@Get()
+	@UseGuards(JwtAuthGuard)
+	async getTickets(@CurrentUser('id') userId: string) {
+		return this.ticketsService.getTickets(userId)
+	}
+
 	@Get(':id/pdf')
 	@UseGuards(JwtAuthGuard)
 	async downloadTicket(@Param('id') ticketId: string, @Res() res: Response) {

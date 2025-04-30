@@ -1,4 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common'
+import {
+	CanActivate,
+	ExecutionContext,
+	Injectable,
+	UnauthorizedException
+} from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { CompanyRole } from '@prisma/client'
 import { PrismaService } from 'src/prisma.service'
@@ -11,53 +16,33 @@ export class CompanyRoleGuard implements CanActivate {
 	) {}
 
 	async canActivate(context: ExecutionContext): Promise<boolean> {
+		// 1. Get required roles from decorator
 		const requiredRoles = this.reflector.get<CompanyRole[]>(
 			'roles',
 			context.getHandler()
 		)
+		if (!requiredRoles) return true
 
-		if (!requiredRoles) {
-			return true
-		}
-
+		// 2. Get request object
 		const request = context.switchToHttp().getRequest()
+		if (!request.user) throw new UnauthorizedException()
+
+		// 3. Get parameters from request
 		const userId = request.user.id
 		const companyId = request.params.id
-		const eventId = request.params.eventId
 
-		// If we have eventId, we need to get the company through the event
-		if (eventId) {
-			const event = await this.prisma.event.findUnique({
-				where: { id: eventId },
-				select: { companyId: true }
-			})
-
-			if (!event) return false
-
-			const member = await this.prisma.companyMember.findFirst({
-				where: {
-					userId,
-					companyId: event.companyId
-				}
-			})
-
-			if (!member) return false
-			return requiredRoles.includes(member.role)
-		}
-
-		// Regular company route check
-		if (companyId) {
-			const member = await this.prisma.companyMember.findFirst({
-				where: {
+		// 4. Check user's role in the company
+		const member = await this.prisma.companyMember.findUnique({
+			where: {
+				userId_companyId: {
 					userId,
 					companyId
 				}
-			})
+			}
+		})
 
-			if (!member) return false
-			return requiredRoles.includes(member.role)
-		}
+		if (!member) return false
 
-		return false
+		return requiredRoles.includes(member.role)
 	}
 }

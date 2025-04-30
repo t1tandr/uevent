@@ -1,14 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common'
-import { PassportStrategy } from '@nestjs/passport'
+import { ConfigType } from '@nestjs/config'
 import { Profile, Strategy } from 'passport-google-oauth20'
 import googleOauthConfig from '../config/google-oauth.config'
-import { ConfigType } from '@nestjs/config'
+import { PassportStrategy } from '@nestjs/passport'
+import { Inject, Injectable } from '@nestjs/common'
+import { AuthService } from '../auth.service'
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy) {
 	constructor(
 		@Inject(googleOauthConfig.KEY)
-		private googleConfiguration: ConfigType<typeof googleOauthConfig>
+		private googleConfiguration: ConfigType<typeof googleOauthConfig>,
+		private authService: AuthService
 	) {
 		super({
 			clientID: googleConfiguration.clientID,
@@ -25,13 +27,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy) {
 	) {
 		const { name, emails, photos } = profile
 
-		const user = {
+		return this.authService.validateOAuthUser({
 			provider: 'GOOGLE',
 			email: emails[0].value,
-			firstName: name.givenName,
+			name: name.givenName,
 			avatarUrl: photos[0].value
-		}
-
-		return user
+		})
 	}
 }

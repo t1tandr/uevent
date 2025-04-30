@@ -5,7 +5,7 @@ import {
 	NotFoundException
 } from '@nestjs/common'
 
-import { CompanyRole } from '@prisma/client'
+import { CompanyRole, EventStatus, Prisma } from '@prisma/client'
 import { PrismaService } from 'src/prisma.service'
 import { S3Service } from 'src/s3/s3.service'
 import { CreateCompanyDto } from '../dto/create-company.dto'
@@ -20,10 +20,73 @@ export class CompaniesService {
 		private s3Service: S3Service
 	) {}
 
-	async create(userId: string, dto: CreateCompanyDto) {
+	async getCompanyEvents(
+		companyId: string,
+		options?: { status?: EventStatus; search?: string }
+	) {
+		const where: Prisma.EventWhereInput = {
+			companyId,
+			...(options?.status && { status: options.status }),
+			...(options?.search && {
+				OR: [
+					{ title: { contains: options.search, mode: 'insensitive' } },
+					{ description: { contains: options.search, mode: 'insensitive' } }
+				]
+			})
+		}
+
+		return this.prisma.event.findMany({
+			where,
+			include: {
+				Category: true,
+				_count: {
+					select: {
+						attendees: true
+					}
+				}
+			},
+			orderBy: {
+				createdAt: 'desc'
+			}
+		})
+	}
+
+	async getCompanyMembers(companyId: string, role?: CompanyRole) {
+		return this.prisma.companyMember.findMany({
+			where: {
+				companyId,
+				...(role && { role })
+			},
+			include: {
+				user: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						avatarUrl: true
+					}
+				}
+			}
+		})
+	}
+
+	async create(
+		userId: string,
+		dto: CreateCompanyDto,
+		logo?: Express.Multer.File
+	) {
+		let logoUrl: string | undefined
+
+		console.log(userId)
+
+		if (logo) {
+			logoUrl = await this.s3Service.uploadFile(logo, 'company-logos')
+		}
+
 		const company = await this.prisma.company.create({
 			data: {
 				...dto,
+				logoUrl,
 				members: {
 					create: {
 						userId,

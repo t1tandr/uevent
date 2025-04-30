@@ -9,6 +9,7 @@ import {
 	ParseFilePipe,
 	Patch,
 	Post,
+	Query,
 	UploadedFile,
 	UseGuards,
 	UseInterceptors
@@ -16,7 +17,7 @@ import {
 import { CompaniesService } from './services/company.service'
 import { CompanySubscribersService } from './services/company-subscribers.service'
 import { FileInterceptor } from '@nestjs/platform-express'
-import { CompanyRole } from '@prisma/client'
+import { CompanyRole, EventStatus } from '@prisma/client'
 import { CurrentUser } from 'src/auth/decorators/user.decorator'
 import { CompanyRoles } from './decorators/company-role.decorator'
 import { AddMemberDto } from './dto/add-member.dto'
@@ -24,6 +25,7 @@ import { UpdateCompanyDto } from './dto/update-company.dto'
 import { CompanyRoleGuard } from './guards/company-role.guard'
 import { AuthGuard } from 'src/auth/decorators/auth.decorator'
 import { CompanyMembersService } from './services/company-member.service'
+import { CreateCompanyDto } from './dto/create-company.dto'
 
 @Controller('companies')
 export class CompaniesController {
@@ -32,6 +34,54 @@ export class CompaniesController {
 		private readonly membersService: CompanyMembersService,
 		private readonly subscribersService: CompanySubscribersService
 	) {}
+
+	@Post()
+	@AuthGuard()
+	@UseInterceptors(FileInterceptor('logo'))
+	async create(
+		@CurrentUser('id') userId: string,
+		@Body() dto: CreateCompanyDto,
+		@UploadedFile(
+			new ParseFilePipe({
+				validators: [
+					new MaxFileSizeValidator({ maxSize: 5 * 1024 * 1024 }),
+					new FileTypeValidator({ fileType: 'image/jpeg|image/png|image/webp' })
+				],
+				fileIsRequired: false
+			})
+		)
+		logo?: Express.Multer.File
+	) {
+		return this.companiesService.create(userId, dto, logo)
+	}
+
+	@Get(':id/events')
+	async getCompanyEvents(
+		@Param('id') companyId: string,
+		@Query('status') status?: EventStatus,
+		@Query('search') search?: string
+	) {
+		return this.companiesService.getCompanyEvents(companyId, {
+			status,
+			search
+		})
+	}
+
+	@Get(':id/members')
+	async getCompanyMembers(
+		@Param('id') companyId: string,
+		@Query('role') role?: CompanyRole
+	) {
+		return this.companiesService.getCompanyMembers(companyId, role)
+	}
+
+	@Get(':id/subscribers')
+	@AuthGuard()
+	@UseGuards(CompanyRoleGuard)
+	@CompanyRoles(CompanyRole.OWNER, CompanyRole.EDITOR)
+	async getCompanySubscribers(@Param('id') companyId: string) {
+		return this.subscribersService.getSubscribers(companyId)
+	}
 
 	@Get()
 	findAll() {
@@ -45,8 +95,8 @@ export class CompaniesController {
 
 	@Post(':id/members')
 	@AuthGuard()
-	@UseGuards(CompanyRoleGuard)
-	@CompanyRoles(CompanyRole.OWNER)
+	// @UseGuards(CompanyRoleGuard)
+	// @CompanyRoles(CompanyRole.OWNER)
 	addMember(@Param('id') id: string, @Body() dto: AddMemberDto) {
 		return this.membersService.addMember(id, dto)
 	}
@@ -107,3 +157,6 @@ export class CompaniesController {
 		return this.subscribersService.unsubscribe(id, userId)
 	}
 }
+//TODO get company events
+//TODO get company members
+//TODO get company subscribers

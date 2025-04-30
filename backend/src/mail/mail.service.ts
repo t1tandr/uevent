@@ -23,7 +23,6 @@ export class MailService {
 		})
 	}
 
-	// Auth related emails
 	async sendWelcome(user: User) {
 		await this.sendEmail({
 			to: user.email,
@@ -47,7 +46,6 @@ export class MailService {
 		})
 	}
 
-	// Event related emails
 	async sendTicketConfirmation(user: User, event: Event, ticket: Ticket) {
 		await this.sendEmail({
 			to: user.email,
@@ -99,7 +97,6 @@ export class MailService {
 		})
 	}
 
-	// Company related emails
 	async sendCompanyInvitation(user: User, company: Company, role: CompanyRole) {
 		await this.sendEmail({
 			to: user.email,

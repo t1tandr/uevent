@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException } from '@nestjs/common'
 import { NotificationType } from '@prisma/client'
 import { MailService } from '../mail/mail.service'
 import { PrismaService } from 'src/prisma.service'
-import { CreateNotificationDto } from './dto/create-notofocation.dto'
+import { CreateNotificationDto } from './dto/create-notifocation.dto'
 
 @Injectable()
 export class NotificationsService {
@@ -11,26 +11,48 @@ export class NotificationsService {
 		private mailService: MailService
 	) {}
 
-	async create(dto: CreateNotificationDto) {
-		return this.prisma.notification.create({
-			data: dto,
+	async getUserNotifications(userId: string) {
+		return this.prisma.notification.findMany({
+			where: {
+				userId,
+				isRead: false
+			},
 			include: {
-				user: true,
-				event: true,
-				company: true
+				event: {
+					select: {
+						id: true,
+						title: true,
+						date: true
+					}
+				},
+				company: {
+					select: {
+						id: true,
+						name: true
+					}
+				}
+			},
+			orderBy: {
+				createdAt: 'desc'
 			}
 		})
 	}
 
 	async markAsRead(userId: string, notificationId: string) {
-		return this.prisma.notification.update({
+		const notification = await this.prisma.notification.findFirst({
 			where: {
 				id: notificationId,
 				userId
-			},
-			data: {
-				isRead: true
 			}
+		})
+
+		if (!notification) {
+			throw new NotFoundException('Notification not found')
+		}
+
+		return this.prisma.notification.update({
+			where: { id: notificationId },
+			data: { isRead: true }
 		})
 	}
 
@@ -46,29 +68,13 @@ export class NotificationsService {
 		})
 	}
 
-	async getUserNotifications(userId: string) {
-		return this.prisma.notification.findMany({
-			where: {
-				userId
-			},
+	async create(dto: CreateNotificationDto) {
+		return this.prisma.notification.create({
+			data: dto,
 			include: {
-				event: {
-					select: {
-						id: true,
-						title: true,
-						date: true
-					}
-				},
-				company: {
-					select: {
-						id: true,
-						name: true,
-						logoUrl: true
-					}
-				}
-			},
-			orderBy: {
-				createdAt: 'desc'
+				user: true,
+				event: true,
+				company: true
 			}
 		})
 	}
@@ -78,9 +84,7 @@ export class NotificationsService {
 			where: { id: eventId },
 			include: {
 				attendees: {
-					include: {
-						user: true
-					}
+					include: { user: true }
 				}
 			}
 		})
@@ -106,9 +110,7 @@ export class NotificationsService {
 		const [event, attendee] = await Promise.all([
 			this.prisma.event.findUnique({
 				where: { id: eventId },
-				include: {
-					organizer: true
-				}
+				include: { organizer: true }
 			}),
 			this.prisma.user.findUnique({
 				where: { id: attendeeId }
@@ -132,6 +134,47 @@ export class NotificationsService {
 		}
 	}
 
+	async createOrganizerUpdateNotification(eventId: string, message: string) {
+		const event = await this.prisma.event.findUnique({
+			where: { id: eventId },
+			include: {
+				attendees: {
+					include: { user: true }
+				}
+			}
+		})
+
+		const notifications = event.attendees.map(ticket =>
+			this.create({
+				message,
+				type: NotificationType.ORGANIZER_UPDATE,
+				userId: ticket.userId,
+				eventId
+			})
+		)
+
+		await Promise.all([...notifications])
+	}
+
+	async createTicketPurchasedNotification(ticketId: string) {
+		const ticket = await this.prisma.ticket.findUnique({
+			where: { id: ticketId },
+			include: {
+				event: true,
+				user: true
+			}
+		})
+
+		await Promise.all([
+			this.create({
+				message: `Your ticket for ${ticket.event.title} has been purchased`,
+				type: NotificationType.TICKET_PURCHASED,
+				userId: ticket.userId,
+				eventId: ticket.eventId
+			})
+		])
+	}
+
 	async createCompanyUpdateNotification(companyId: string, message: string) {
 		const subscribers = await this.prisma.subscriber.findMany({
 			where: { companyId },
@@ -147,6 +190,8 @@ export class NotificationsService {
 			})
 		)
 
-		await Promise.all(notifications)
+		await Promise.all([...notifications])
 	}
+
+	// ... existing methods ...
 }

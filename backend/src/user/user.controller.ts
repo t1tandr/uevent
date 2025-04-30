@@ -27,7 +27,7 @@ export class UserController {
 		return this.userService.getProfile(userId)
 	}
 
-	@Get('id')
+	@Get(':id')
 	async getPublicProfile(@Param('id') userId: string) {
 		return this.userService.getPublicProfile(userId)
 	}

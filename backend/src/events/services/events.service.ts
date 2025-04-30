@@ -15,7 +15,9 @@ import {
 import { PrismaService } from 'src/prisma.service'
 import { EventPublisherService } from '../queues/event-publisher.service'
 import { NotificationsService } from 'src/notifications/notifications.service'
-import { CompanyRole } from '@prisma/client'
+import { CompanyRole, EventStatus } from '@prisma/client'
+import { MailService } from 'src/mail/mail.service'
+import { UpdateEventDto } from '../dto/update-event.dto'
 
 @Injectable()
 export class EventsService {
@@ -23,7 +25,8 @@ export class EventsService {
 		private prisma: PrismaService,
 		private s3Service: S3Service,
 		private eventPublisherService: EventPublisherService,
-		private notificationService: NotificationsService
+		private notificationsService: NotificationsService,
+		private mailService: MailService
 	) {}
 
 	async checkEventAccess(
@@ -103,6 +106,72 @@ export class EventsService {
 
 			return event
 		})
+	}
+
+	async updateEvent(eventId: string, userId: string, dto: UpdateEventDto) {
+		const event = await this.prisma.event.findUnique({
+			where: { id: eventId },
+			include: {
+				attendees: {
+					include: {
+						user: true
+					}
+				}
+			}
+		})
+
+		if (!event) {
+			throw new NotFoundException('Event not found')
+		}
+
+		// If status is being changed to CANCELLED, handle cancellation
+		if (
+			dto.status === EventStatus.CANCELLED &&
+			event.status !== EventStatus.CANCELLED
+		) {
+			return this.cancelEvent(eventId)
+		}
+
+		const updatedEvent = await this.prisma.event.update({
+			where: { id: eventId },
+			data: {
+				...dto,
+				// Convert date string to Date object if provided
+				date: dto.date ? new Date(dto.date) : undefined,
+				publishDate: dto.publishDate ? new Date(dto.publishDate) : undefined
+			},
+			include: {
+				organizer: true,
+				Category: true,
+				Company: true,
+				attendees: {
+					include: {
+						user: true
+					}
+				}
+			}
+		})
+
+		// If significant changes were made and notifications are enabled
+		if (
+			event.notifyOrganizer &&
+			(dto.date || dto.location || dto.status === EventStatus.PUBLISHED)
+		) {
+			await this.notificationsService.createOrganizerUpdateNotification(
+				eventId,
+				`Event "${updatedEvent.title}" has been updated: ${this.getUpdateMessage(dto)}`
+			)
+		}
+
+		return updatedEvent
+	}
+
+	private getUpdateMessage(dto: UpdateEventDto): string {
+		const changes = []
+		if (dto.date) changes.push('date changed')
+		if (dto.location) changes.push('location updated')
+		if (dto.status === EventStatus.PUBLISHED) changes.push('event published')
+		return changes.join(', ')
 	}
 
 	async updateEventImages(
@@ -392,5 +461,33 @@ export class EventsService {
 		}
 
 		return sortQuery
+	}
+
+	async cancelEvent(eventId: string) {
+		const event = await this.prisma.event.update({
+			where: { id: eventId },
+			data: { status: EventStatus.CANCELLED },
+			include: {
+				attendees: {
+					include: {
+						user: true
+					}
+				}
+			}
+		})
+
+		await this.notificationsService.createOrganizerUpdateNotification(
+			eventId,
+			`Event "${event.title}" has been cancelled`
+		)
+
+		// Send cancellation emails
+		await Promise.all(
+			event.attendees.map(attendee =>
+				this.mailService.sendEventCancellation(attendee.user, event)
+			)
+		)
+
+		return event
 	}
 }

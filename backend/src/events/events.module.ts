@@ -19,7 +19,8 @@ import { PrismaService } from 'src/prisma.service'
 		NotificationsModule,
 		BullModule.registerQueue({
 			name: 'event-publisher'
-		})
+		}),
+		NotificationsModule
 	],
 	controllers: [EventsController],
 	providers: [

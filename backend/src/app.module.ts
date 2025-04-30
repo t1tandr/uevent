@@ -10,6 +10,7 @@ import { BullModule } from '@nestjs/bull'
 import { NotificationsModule } from './notifications/notifications.module'
 import { TicketsModule } from './tickets/tickets.module';
 import { FiltersModule } from './filters/filters.module';
+import { CommentsModule } from './comments/comments.module';
 
 @Module({
 	imports: [
@@ -31,7 +32,8 @@ import { FiltersModule } from './filters/filters.module';
 		MailModule,
 		NotificationsModule,
 		TicketsModule,
-		FiltersModule
+		FiltersModule,
+		CommentsModule
 	]
 })
 export class AppModule {}

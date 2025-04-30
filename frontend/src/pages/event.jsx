@@ -1,4 +1,4 @@
-import { Button, Image, Spinner, Card, CardHeader, CardBody, CardFooter, Switch, Tabs, Tab, Avatar, Textarea, Modal, ModalBody, ModalHeader, ModalFooter, useDisclosure, ModalContent, Input } from "@heroui/react";
+import { Button, Image, Spinner, Card, CardHeader, CardBody, CardFooter, Switch, Tabs, Tab, Avatar, Textarea, Modal, ModalBody, ModalHeader, ModalFooter, Divider, useDisclosure, ModalContent, Input } from "@heroui/react";
 import { useState, useEffect } from "react";
 import DefaultLayout from "../layouts/default";
 import { useParams, useNavigate } from "react-router-dom";
@@ -23,6 +23,12 @@ const dataTest2 = [
   { id: 2, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
   { id: 3, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
   { id: 4, title: "Breathing App", description: "Get a good night's sleep." }
+];
+
+const relevantData = [
+  { id: 1, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
+  { id: 2, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
+  { id: 3, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
 ];
 
 const userData = [
@@ -56,6 +62,7 @@ export default function EventPage() {
   const [parentComment, setParentComment] = useState(null);
   const [userComment, setUserComment] = useState(null);
   const [organization, setOrganization] = useState(null);
+  const [relevant, setRelevant] = useState(null);
   const [promocode, setPromocode] = useState(null);
   const navigate = useNavigate();
 
@@ -73,6 +80,7 @@ export default function EventPage() {
     setUsers(userData);
     setComments(commentsData);
     setOrganization(organizationData);
+    setRelevant(relevantData);
   }, []);
 
   const handleFollowUnfollow = () => {
@@ -216,6 +224,37 @@ export default function EventPage() {
     )))
   };
 
+  const cardRelevant = () => {
+    return (relevant && relevant.map((post, index) => (
+      <Card key={index} isPressable onPress={() => navigate(`/event/${post.id}`)} className="group/card">
+        <div className={"overflow-hidden relative rounded-md shadow-xl h-full max-w-sm flex flex-col p-4"}>
+          <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-gray-400 dark:group-hover/card:bg-black opacity-60"></div>
+          <img className="absolute top-0 left-0 w-full h-full object-contain blur-lg opacity-20" src={post?.image} />
+          <CardHeader>
+            <h2 className="dark:text-white/90 text-black/90 font-medium text-xl">{post.title}</h2>
+          </CardHeader>
+
+          {post.image && <CardBody>
+            <div className="rounded-lg overflow-hidden flex justify-center items-center h-60">
+              <Image
+                src={post?.image}
+                alt={post.title}
+                loading="lazy"
+              />
+            </div>
+          </CardBody>}
+
+          <CardFooter>
+            <div className="flex flex-grow gap-2 items-center">
+              <p className="dark:text-white/60 text-black/60">{post.description}</p>
+            </div>
+          </CardFooter>
+
+        </div>
+      </Card>
+    )))
+  };
+
   const modal = () => {
     return (<Modal isOpen={isOpen} backdrop="blur" placement="center" onOpenChange={onOpenChange} className="z-50">
       <ModalContent>
@@ -327,8 +366,12 @@ export default function EventPage() {
               </div>
             </div>
           </Tab>
+          <Tab key="relevant" title="Relevant events">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {cardRelevant()}
+            </div>
+          </Tab>
         </Tabs>
-        
       </section>
     </DefaultLayout>
   );

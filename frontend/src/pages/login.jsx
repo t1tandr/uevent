@@ -1,5 +1,3 @@
-"use client";
-
 import { motion } from "framer-motion";
 import { AuroraBackground } from "../components/ui/aurora-background.jsx";
 import React from "react";
@@ -20,7 +18,7 @@ const schema = z.object({
 export default function Login() {
   const { err, setErr } = React.useState(null);
   const { register, handleSubmit, formState: { errors, isValid } } = useForm({
-    defaultValues: {
+    value: {
       name: "",
       email: "",
       password: "",

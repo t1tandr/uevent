@@ -1,10 +1,11 @@
-import { Button, Image, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, User, Tab, Tabs, Input, Card, CardHeader, CardBody, CardFooter } from "@heroui/react";
-
+import { Button, Image, Table, TableHeader, TableColumn, TableBody, TableRow, TableCell, User, Tab, Tabs, Input, Card, CardHeader, CardBody, CardFooter, Form, Textarea } from "@heroui/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { useState, useEffect, useCallback } from "react";
 import DefaultLayout from "../layouts/default";
 import { FileUpload } from "../components/ui/file-upload";
 import { useNavigate } from "react-router-dom";
-import { } from "@heroui/react";
 
 const dataTest = [
   { id: 1, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
@@ -62,11 +63,31 @@ export const users = [
   },
 ];
 
+const schema = z.object({
+  email: z.string().email("Invalid email address").or(z.literal("")).optional(),
+  location: z.string().min(1, "Location is required").or(z.literal("")).optional(),
+  description: z.string().min(1, "Description is required").or(z.literal("")).optional(),
+  website: z.string().url("Invalid URL").or(z.literal("")).optional(),
+  phone: z.string().min(1, "Phone number is required").or(z.literal("")).optional(),
+});
+
 export default function ProfilePage() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [edit, setEdit] = useState(false);
   const [company, setCompany] = useState(null);
+
+  const { register, handleSubmit, formState: { errors, isValid } } = useForm({
+      value: {
+        email: "",
+        location: "",
+        description: "",
+        website: "",
+        phone: "",
+      },
+      resolver: zodResolver(schema),
+      mode: "onChange",
+    });
 
   useEffect(() => {
     setData(dataTest);
@@ -77,11 +98,20 @@ export default function ProfilePage() {
     setEdit(!edit);
   }
 
+  const handleAddMember = () => {
+
+  }
+
   const [files, setFiles] = useState([]);
   const handleFileUpload = (files) => {
     setFiles(files);
     console.log(files);
   };
+
+  const onSubmit = (data) => {
+    console.log(data);
+    setEdit(!edit);
+  }
 
   const renderCell = useCallback((user, columnKey) => {
     const cellValue = user[columnKey];
@@ -127,12 +157,55 @@ export default function ProfilePage() {
                   <FileUpload onChange={handleFileUpload} />
                 </div>
                 <div className="flex flex-col gap-2 w-full">
-                  <Input label="Email" type="email" />
-                  <Input label="Location" />
-                  <Input label="Description" />
-                  <Input label="Website" />
-                  <Input label="Phone" />
-                  <Button onPress={() => handleEdit()} className="bg-primary">Save</Button>
+                  <Form
+                    className="mx-auto w-full gap-5"
+                    validationErrors={errors}
+                    onSubmit={handleSubmit(onSubmit)}>
+                    <Input
+                      {...register("email")}
+                      errorMessage={errors.email?.message}
+                      isInvalid={!!errors.email}
+                      label="Email"
+                      name="email"
+                      placeholder="Enter email"
+                      type="email"
+                    />
+                    <Input
+                      {...register("location")}
+                      errorMessage={errors.location?.message}
+                      isInvalid={!!errors.location}
+                      label="Location"
+                      name="location"
+                      placeholder="Enter location"
+                    />
+                    <Textarea
+                      {...register("description")}
+                      errorMessage={errors.description?.message}
+                      isInvalid={!!errors.description}
+                      label="Description"
+                      name="description"
+                      placeholder="Enter description"
+                    />
+                    <Input
+                      {...register("website")}
+                      errorMessage={errors.website?.message}
+                      isInvalid={!!errors.website}
+                      label="Website"
+                      name="website"
+                      placeholder="Enter website"
+                      type="website"
+                    />
+                    <Input
+                      {...register("phone")}
+                      errorMessage={errors.phone?.message}
+                      isInvalid={!!errors.phone}
+                      label="Phone"
+                      name="phone"
+                      placeholder="Enter phone"
+                      type="phone"
+                    />
+                    <Button type="submit" className="bg-primary">Save</Button>
+                  </Form>
                 </div>
               </>
             ) : (
@@ -162,8 +235,8 @@ export default function ProfilePage() {
         <Button onPress={() => navigate("/event/create")} className="w-full bg-primary/60">Create event</Button>
         <div>
           <Tabs size="lg" className="w-full" defaultSelectedKey="Comments">
-            <Tab key="notification" title="Notifications">
-              <Table aria-label="Example table with custom cells">
+            <Tab key="members" title="Members" className="flex flex-col gap-4">
+              <Table>
                 <TableHeader columns={columns}>
                   {(column) => (
                     <TableColumn key={column.uid}>
@@ -179,6 +252,7 @@ export default function ProfilePage() {
                   )}
                 </TableBody>
               </Table>
+              <Button onPress={() => handleAddMember()}>Add member</Button>
             </Tab>
             <Tab key="event" title="Events">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">

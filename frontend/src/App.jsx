@@ -11,24 +11,23 @@ import CreateCompanyPage from "./pages/createCompany.jsx";
 import ManageCompanyPage from "./pages/manageCompany.jsx";
 import CreateEventPage from "./pages/createEvent.jsx";
 import EditEventPage from "./pages/editEvent.jsx";
+import OtherProfilePage from "./pages/profileOther.jsx";
+import Error from "./pages/404.jsx";
 
 function App() {
   return (
     <Routes>
-      <Route element={<ProtectedRouteNotAuth />}>
-        <Route element={<Login />} path="/login" />
-        <Route element={<Register />} path="/register" />
-        <Route element={<IndexPage />} path="/" />
-        <Route element={<EventPage />} path="/event/:id"/>
-        <Route element={<ProfilePage />} path="/profile"/>
-        <Route element={<CreateCompanyPage />} path="/company/create"/>
-        <Route element={<ManageCompanyPage />} path="/company/manage"/>
-        <Route element={<CreateEventPage />} path="/event/create"/>
-        <Route element={<EditEventPage />} path="/event/edit/:id"/>
-      </Route>
-
-      <Route element={<ProtectedRouteAuth />}>
-      </Route>
+      <Route element={<Login />} path="/login" />
+      <Route element={<Register />} path="/register" />
+      <Route element={<IndexPage />} path="/" />
+      <Route element={<EventPage />} path="/event/:id" />
+      <Route element={<ProfilePage />} path="/profile" />
+      <Route element={<CreateCompanyPage />} path="/company/create" />
+      <Route element={<ManageCompanyPage />} path="/company/manage" />
+      <Route element={<CreateEventPage />} path="/event/create" />
+      <Route element={<EditEventPage />} path="/event/edit/:id" />
+      <Route element={<OtherProfilePage />} path="/profile/:id" />
+      <Route element={<Error />} path="*" />
     </Routes>
   );
 }

@@ -1,13 +1,16 @@
 import { axiosWithAuth } from "../api/interceptors";
 
 export const ticketsService = {
-  // Create new ticket
   async createTicket(data) {
     const response = await axiosWithAuth.post("/tickets", data);
     return response.data;
   },
 
-  // Download ticket PDF
+  async getUserTickets() {
+    const response = await axiosWithAuth.get("/tickets");
+    return response.data;
+  },
+
   async downloadTicketPDF(ticketId) {
     const response = await axiosWithAuth.get(`/tickets/${ticketId}/pdf`, {
       responseType: "blob",

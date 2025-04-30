@@ -108,6 +108,10 @@ export const eventsService = {
     );
   },
 
+  async getUserEvents() {
+    return axiosWithAuth.get("/events/user");
+  },
+
   async deletePromoCode(eventId, promoCodeId) {
     return axiosWithAuth.delete(
       `/events/${eventId}/promo-codes/${promoCodeId}`

@@ -1,262 +1,413 @@
-import { Card, CardHeader, CardFooter, Button, Image, CardBody, Tab, Tabs, Input, Form } from "@heroui/react";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardHeader,
+  CardFooter,
+  Button,
+  Image,
+  CardBody,
+  Tab,
+  Tabs,
+  Input,
+  Form,
+} from "@heroui/react";
+import { getAccessToken } from "../services/auth-token.service";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState, useEffect } from "react";
 import DefaultLayout from "../layouts/default";
 import { FileUpload } from "../components/ui/file-upload";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { authService } from "../services/auth.service";
-import { useDispatch } from 'react-redux';
-import { logout } from '../store/authSlice.js';
-
-
-
-const dataTest = [
-  { id: 1, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 2, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 3, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 4, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" }
-];
-
-const ticketsData = [
-  { id: 1, qr: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/QR_code_for_mobile_English_Wikipedia.svg/1280px-QR_code_for_mobile_English_Wikipedia.svg.png", price: "free" },
-  { id: 1, qr: "", price: "paid" },
-  { id: 1, qr: "", price: "vip" },
-  { id: 1, qr: "", price: "early-bird" }
-]
-
-const notificationsData = [
-  { event: "Breathing App", data: "02-05-25", id: 1, message: "Test notification 1" },
-  { event: "Breathing App", data: "02-05-25", id: 2, message: "Test notification 2" },
-  { event: "Breathing App", data: "02-05-25", id: 3, message: "Test notification 3" },
-  { event: "Breathing App", data: "02-05-25", id: 4, message: "Test notification 4" }
-]
-
-const userData = {
-  name: "John Doe",
-  email: "eege@gmail.com",
-  avatar: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080"
-}
+import { authService } from "@/services/auth.service";
+import { ticketsService } from "@/services/ticket.service";
+import { notificationsService } from "@/services/notification.service";
+import { eventsService } from "@/services/event.service";
+import { companiesService } from "@/services/company.service";
+import { userService } from "@/services/user.service";
 
 const schema = z.object({
-  name: z.string().min(1, 'Name must be at least 1 character long').or(z.literal("")).optional(),
-  email: z.string().email('Invalid email').or(z.literal("")).optional(),
+  name: z.string().min(1, "Name must be at least 1 character long"),
+  email: z.string().email("Invalid email"),
 });
 
 export default function ProfilePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [data, setData] = useState(null);
-  const [tickets, setTickets] = useState(null);
-  const [notifications, setNotifications] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [tickets, setTickets] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [edit, setEdit] = useState(false);
   const [user, setUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("notification");
+  const [activeTab, setActiveTab] = useState("notifications");
 
-  const { register, handleSubmit, formState: { errors, isValid } } = useForm({
-    value: {
-      name: "",
-      email: ""
-    },
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
     resolver: zodResolver(schema),
     mode: "onChange",
   });
 
   useEffect(() => {
-    setData(dataTest);
-    setTickets(ticketsData);
-    setNotifications(notificationsData);
-    setUser(userData);
-  }, []);
+    const token = getAccessToken();
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    fetchData();
+  }, [navigate]);
 
-  const handleEdit = () => {
-    setEdit(!edit);
-  }
+  useEffect(() => {
+    if (user) {
+      reset({
+        name: user.name || "",
+        email: user.email || "",
+      });
+    }
+  }, [user, reset]);
 
-  const handleMarkAsRead = (id) => {
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-  }
+      const profileResponse = await authService.getProfile();
+      setUser(profileResponse.data);
 
-  const handleMarkAllAsRead = () => {
+      const [
+        notificationsResponse,
+        ticketsResponse,
+        eventsResponse,
+        companiesResponse,
+      ] = await Promise.allSettled([
+        notificationsService.getUserNotifications(),
+        ticketsService.getUserTickets(),
+        eventsService.getUserEvents(),
+        companiesService.getUserCompanies(),
+      ]);
 
-  }
+      setNotifications(
+        notificationsResponse.status === "fulfilled"
+          ? notificationsResponse.value?.data || []
+          : []
+      );
 
-  const onSubmit = (data) => {
-    console.log(data);
-    setEdit(!edit);
-  }
+      setTickets(
+        ticketsResponse.status === "fulfilled"
+          ? ticketsResponse.value?.data || []
+          : []
+      );
 
-  const [files, setFiles] = useState([]);
-  const handleFileUpload = (files) => {
-    setFiles(files);
-    console.log(files);
+      setEvents(
+        eventsResponse.status === "fulfilled"
+          ? eventsResponse.value?.data || []
+          : []
+      );
+
+      setCompanies(
+        companiesResponse.status === "fulfilled"
+          ? companiesResponse.value?.data || []
+          : []
+      );
+    } catch (err) {
+      console.error("Error details:", err.response?.data || err);
+      setError(err.response?.data?.message || "Failed to load profile data");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleFileUpload = async (files) => {
+    if (files?.length) {
+      try {
+        setLoading(true);
+        const updatedUser = await userService.updateAvatar(files[0]);
+        setUser((prev) => ({ ...prev, avatarUrl: updatedUser.avatarUrl }));
+      } catch (err) {
+        setError("Failed to update avatar");
+        console.error("Failed to upload avatar:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const onSubmit = async (data) => {
+    try {
+      setLoading(true);
+      const updatedUser = await userService.updateProfile(data);
+      setUser(updatedUser);
+      setEdit(false);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to update profile");
+      console.error("Failed to update profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      navigate("/login");
+    } catch (err) {
+      console.error("Failed to logout:", err);
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId) => {
+    try {
+      await notificationsService.markAsRead(notificationId);
+      setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
+    } catch (err) {
+      console.error("Failed to mark notification as read:", err);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await notificationsService.markAllAsRead();
+      setNotifications([]);
+    } catch (err) {
+      console.error("Failed to mark all notifications as read:", err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <DefaultLayout>
+        <div className="flex justify-center items-center min-h-screen">
+          Loading...
+        </div>
+      </DefaultLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <DefaultLayout>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="bg-red-500/10 border border-red-500 rounded-lg p-4 text-red-500">
+            {error}
+          </div>
+        </div>
+      </DefaultLayout>
+    );
+  }
 
   return (
     <DefaultLayout>
-      <div className="min-h-screen flex flex-col justify-between">
-        <div className="flex flex-col gap-4 flex-grow">
-          {user && (
-            <div className="flex flex-row justify-between gap-4 text-2xl p-4 bg-zinc-600/20 rounded-md shadow-[0_0_15px_rgba(255,255,255,0.2)]">
-              {edit ? (
-                <>
-                  <div className="w-[20vh] h-[20vh]">
-                    <FileUpload onChange={handleFileUpload} />
+      <div className="min-h-screen flex flex-col gap-6 p-4">
+        {/* Profile Header */}
+        <div className="bg-gray-800/30 rounded-xl p-6 shadow-lg">
+          {edit ? (
+            <div className="flex gap-6">
+              <div className="w-48">
+                <FileUpload
+                  onChange={handleFileUpload}
+                  currentImage={user?.avatarUrl}
+                  disabled={loading}
+                />
+              </div>
+              <Form onSubmit={handleSubmit(onSubmit)} className="flex-1">
+                <div className="space-y-4">
+                  <Input
+                    {...register("name")}
+                    label="Name"
+                    error={errors.name?.message}
+                    disabled={loading}
+                  />
+                  <Input
+                    {...register("email")}
+                    label="Email"
+                    type="email"
+                    error={errors.email?.message}
+                    disabled={loading}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="submit"
+                      color="primary"
+                      disabled={loading}
+                      isLoading={loading}
+                    >
+                      Save Changes
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => setEdit(false)}
+                      disabled={loading}
+                    >
+                      Cancel
+                    </Button>
                   </div>
-                  <div className="flex flex-col gap-2 w-full">
-                    <Form
-                      className="mx-auto w-full gap-5"
-                      validationErrors={errors}
-                      onSubmit={handleSubmit(onSubmit)}>
-                      <Input
-                        {...register("name")}
-                        errorMessage={errors.name?.message}
-                        isInvalid={!!errors.name}
-                        label="Name"
-                        name="name"
-                        placeholder="Enter name"
-                      />
-                      <Input
-                        {...register("email")}
-                        errorMessage={errors.email?.message}
-                        isInvalid={!!errors.email}
-                        label="Email"
-                        name="email"
-                        placeholder="Enter email"
-                        type="email"
-                      />
-                      <Button type="submit" className="bg-primary">Save</Button>
-                    </Form>
-                  </div>
-                </>
-              ) : (
-                <>
-                  < div className="flex flex-row justify-center items-center gap-4">
-                    <Image isBlurred className="w-[20vh] h-[20vh] object-cover rounded-md" src={user.avatar} />
-                    <div className="flex flex-col gap-2">
-                      <h2>{user.name}</h2>
-                      <h2 className="text-bold text-xl">{user.email}</h2>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button onPress={() => handleEdit()} className="bg-primary ">Edit Profile</Button>
-                    <Button onPress={() => navigate("/profile/delete")} className="bg-red-500 ">Delete profile</Button>
-                    <Button onPress={() => navigate("/company/manage")} >Manage company</Button>
-                  </div>
-                </>
-              )}
+                </div>
+              </Form>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between">
+              <div className="flex gap-6">
+                <Image
+                  src={user?.avatarUrl || "/default-avatar.png"}
+                  alt="Profile"
+                  className="w-48 h-48 rounded-lg object-cover"
+                />
+                <div>
+                  <h1 className="text-2xl font-bold">{user?.name}</h1>
+                  <p className="text-gray-400">{user?.email}</p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Button
+                  color="primary"
+                  onClick={() => setEdit(true)}
+                  disabled={loading}
+                >
+                  Edit Profile
+                </Button>
+                <Button
+                  color="danger"
+                  onClick={handleLogout}
+                  disabled={loading}
+                >
+                  Logout
+                </Button>
+              </div>
             </div>
           )}
-          <div className="w-full flex flex-col gap-4">
-            <div className="flex justify-between items-center">
-              <Tabs size="lg" className="w-full" defaultSelectedKey="notification" selectedKey={activeTab} onSelectionChange={(key) => setActiveTab(key)}>
-                <Tab key="notification" title="Notifications" />
-                <Tab key="ticket" title="Tickets" />
-                <Tab key="event" title="Events" />
-              </Tabs>
-
-              {activeTab === "notification" && (<Button onPress={handleMarkAllAsRead}>
-                Mark all as read
-              </Button>)}
-            </div>
-
-            {activeTab === "notification" && (<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
-              {notifications && notifications.map((notification, index) => (
-                <Card key={index} onPress={() => navigate(`/event/${notification.id}`)} className="flex-grow w-full group/card">
-                  <div className={"flex flex-col justify-between"}>
-                    <CardHeader>
-                      <div className="flex flex-col gap-2">
-                        <h2 className="dark:text-white/90 text-black/90 font-medium text-xl">{notification.event}</h2>
-                        <p className="dark:text-white/60 text-black/60">{notification.data}</p>
-                      </div>
-                    </CardHeader>
-
-                    <CardBody>
-                      <p className="dark:text-white/60 text-black/60">{notification.message}</p>
-                    </CardBody>
-
-                    <CardFooter>
-                      <Button onPress={handleMarkAsRead(notification.id)} className="bg-purple-500 w-full">
-                        Mark as read
-                      </Button>
-                    </CardFooter>
-
-                  </div>
-                </Card>
-              ))}
-            </div>
-            )}
-
-            {activeTab === "ticket" && (<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-6">
-              {tickets && tickets.map((ticket, index) => (
-                <Card key={index} onPress={() => navigate(`/event/${ticket.id}`)} className="flex-grow w-full group/card">
-                  <div className={"flex flex-col justify-between"}>
-                    <CardHeader>
-                      <h2 className="dark:text-white/90 text-black/90 font-medium text-xl">{ticket.title}</h2>
-                    </CardHeader>
-
-                    <CardBody className="">
-                      <div className="overflow-hidden flex justify-center items-center">
-                        <Image
-                          isBlurred
-                          src={ticket.qr}
-                          className="object-contain"
-                          loading="lazy"
-                        />
-                      </div>
-                    </CardBody>
-
-                    <CardFooter>
-                      <div className="flex flex-grow gap-2 items-center">
-                        <p className="dark:text-white/60 text-black/60">{ticket.price}</p>
-                      </div>
-                    </CardFooter>
-
-                  </div>
-                </Card>
-              ))}
-            </div>
-            )}
-
-            {activeTab === "event" && (<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {data && data.map((post, index) => (
-                <Card key={index} isPressable onPress={() => navigate(`/event/${post.id}`)} className="group/card">
-                  <div className={"overflow-hidden relative rounded-md shadow-xl h-full max-w-sm flex flex-col p-4"}>
-                    <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-gray-400 dark:group-hover/card:bg-black opacity-60"></div>
-                    <img className="absolute top-0 left-0 w-full h-full object-contain blur-lg opacity-20" src={post?.image} />
-                    <CardHeader>
-                      <h2 className="dark:text-white/90 text-black/90 font-medium text-xl">{post.title}</h2>
-                    </CardHeader>
-
-                    {post.image && <CardBody>
-                      <div className="rounded-lg overflow-hidden flex justify-center items-center h-60">
-                        <Image
-                          src={post?.image}
-                          alt={post.title}
-                          loading="lazy"
-                        />
-                      </div>
-                    </CardBody>}
-
-                    <CardFooter>
-                      <div className="flex flex-grow gap-2 items-center">
-                        <p className="dark:text-white/60 text-black/60">{post.description}</p>
-                      </div>
-                    </CardFooter>
-
-                  </div>
-                </Card>
-              ))}
-            </div>
-            )}
-          </div>
         </div>
-        <div className="flex flex-col gap-4 p-4">
-          <Button onPress={() => navigate("/company/create")} className="bg-purple-600/50 w-full text-white">Create company</Button>
-          <Button onPress={() => {authService.logout(); dispatch(logout());  navigate("/login")}} className="bg-red-600/50 w-full text-white">Logout Profile</Button>
-        </div>
+
+        {/* Tabs */}
+        <Tabs selectedKey={activeTab} onSelectionChange={setActiveTab}>
+          <Tab
+            key="notifications"
+            title={`Notifications (${notifications.length})`}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {notifications.map((notification) => (
+                <Card key={notification.id}>
+                  <CardBody>
+                    <p>{notification.message}</p>
+                    <small className="text-gray-400">
+                      {new Date(notification.createdAt).toLocaleDateString()}
+                    </small>
+                  </CardBody>
+                  <CardFooter>
+                    <Button
+                      size="sm"
+                      onPress={() => handleMarkAsRead(notification.id)}
+                    >
+                      Mark as read
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </Tab>
+
+          <Tab key="tickets" title={`Tickets (${tickets.length})`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {tickets.map((ticket) => (
+                <Card
+                  key={ticket.id}
+                  isPressable
+                  onPress={() => navigate(`/event/${ticket.eventId}`)}
+                >
+                  <CardBody>
+                    <h3 className="text-lg font-semibold">
+                      {ticket.event.title}
+                    </h3>
+                    <p className="text-sm text-gray-400">
+                      {new Date(ticket.event.date).toLocaleDateString()}
+                    </p>
+                  </CardBody>
+                  <CardFooter>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        ticketsService.downloadTicketPDF(ticket.id)
+                      }
+                    >
+                      Download PDF
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </Tab>
+
+          <Tab key="events" title={`Events (${events.length})`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {events.map((event) => (
+                <Card
+                  key={event.id}
+                  isPressable
+                  onPress={() => navigate(`/event/${event.id}`)}
+                >
+                  <CardHeader>
+                    <h3 className="text-lg font-semibold">{event.title}</h3>
+                  </CardHeader>
+                  <CardBody>
+                    {event.image && (
+                      <Image
+                        src={event.image}
+                        alt={event.title}
+                        className="w-full h-48 object-cover rounded"
+                      />
+                    )}
+                    <p className="mt-2">{event.description}</p>
+                  </CardBody>
+                </Card>
+              ))}
+            </div>
+          </Tab>
+
+          <Tab key="companies" title={`Companies (${companies.length})`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {companies.map((company) => (
+                <Card key={company.id}>
+                  <CardHeader>
+                    <h3 className="text-lg font-semibold">{company.name}</h3>
+                  </CardHeader>
+                  <CardBody>
+                    {company.logo && (
+                      <Image
+                        src={company.logo}
+                        alt={company.name}
+                        className="w-full h-48 object-cover rounded"
+                      />
+                    )}
+                    <p className="mt-2">{company.description}</p>
+                  </CardBody>
+                  <CardFooter>
+                    <Button
+                      color="primary"
+                      onClick={() => navigate(`/company/${company.id}`)}
+                    >
+                      View Company
+                    </Button>
+                  </CardFooter>
+                </Card>
+              ))}
+            </div>
+          </Tab>
+        </Tabs>
+
+        {/* Create Company Button */}
+        <Button
+          color="secondary"
+          className="mt-auto"
+          onClick={() => navigate("/company/create")}
+        >
+          Create New Company
+        </Button>
       </div>
-    </DefaultLayout >
+    </DefaultLayout>
   );
 }

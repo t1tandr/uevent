@@ -38,7 +38,7 @@ export const authService = {
   },
 
   async getProfile() {
-    return axiosWithAuth.get("/users/profile");
+    return axiosWithAuth.get("/user/profile");
   },
 
   async googleAuth(accessToken) {

@@ -1,6 +1,5 @@
 import axios from "axios";
-import { getAccessToken } from "@/services/auth-token.service";
-import { authService } from "@/services/auth.service";
+import { getAccessToken } from "../services/auth-token.service";
 
 const options = {
   baseURL: "http://localhost:3000/api",
@@ -14,31 +13,20 @@ const axiosClassic = axios.create(options);
 const axiosWithAuth = axios.create(options);
 
 axiosWithAuth.interceptors.request.use((config) => {
-  const accessToken = getAccessToken();
+  const token = getAccessToken();
 
-  if (config?.headers && accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
   return config;
 });
 
 axiosWithAuth.interceptors.response.use(
-  (config) => config,
+  (response) => {
+    return response;
+  },
   async (error) => {
-    const originalRequest = error.config;
-    if (error?.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-      try {
-        await authService.getNewTokens();
-        return axiosWithAuth(originalRequest);
-      } catch (error) {
-        if (error?.response?.status === 401) {
-          authService.logout();
-        }
-      }
-      throw error;
-    }
     return Promise.reject(error);
   }
 );

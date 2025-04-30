@@ -6,15 +6,15 @@ export const EnumTokens = {
 };
 
 export const getAccessToken = () => {
-  const accessToken = localStorage.getItem(EnumTokens.ACCESS_TOKEN);
-  return accessToken || null;
+  const token = Cookies.get("accessToken");
+  return token;
 };
 
 export const saveTokenStorage = (accessToken) => {
-  Cookies.set(EnumTokens.ACCESS_TOKEN, accessToken, {
-    domain: "localhost",
-    sameSite: "strict",
+  Cookies.set("accessToken", accessToken, {
     expires: 1,
+    path: "/",
+    sameSite: "strict",
   });
 };
 

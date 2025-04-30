@@ -73,4 +73,8 @@ export const companiesService = {
   async unsubscribe(companyId) {
     return axiosWithAuth.delete(`/companies/${companyId}/subscribe`);
   },
+
+  async getUserCompanies() {
+    return axiosWithAuth.get("/companies/me");
+  },
 };

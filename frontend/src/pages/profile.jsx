@@ -6,6 +6,11 @@ import DefaultLayout from "../layouts/default";
 import { FileUpload } from "../components/ui/file-upload";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { authService } from "../services/auth.service";
+import { useDispatch } from 'react-redux';
+import { logout } from '../store/authSlice.js';
+
+
 
 const dataTest = [
   { id: 1, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
@@ -40,6 +45,7 @@ const schema = z.object({
 });
 
 export default function ProfilePage() {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [tickets, setTickets] = useState(null);
@@ -248,7 +254,7 @@ export default function ProfilePage() {
         </div>
         <div className="flex flex-col gap-4 p-4">
           <Button onPress={() => navigate("/company/create")} className="bg-purple-600/50 w-full text-white">Create company</Button>
-          <Button onPress={() => navigate("/profile/edit")} className="bg-red-600/50 w-full text-white">Logout Profile</Button>
+          <Button onPress={() => {authService.logout(); dispatch(logout());  navigate("/login")}} className="bg-red-600/50 w-full text-white">Logout Profile</Button>
         </div>
       </div>
     </DefaultLayout >

@@ -4,11 +4,9 @@ import {
   Navbar as HeroUINavbar,
   NavbarBrand,
   NavbarContent,
-  NavbarItem,
-  NavbarMenuToggle,
-  NavbarMenu,
-  NavbarMenuItem,
+  NavbarItem
 } from "@heroui/navbar";
+import { useSelector } from "react-redux";
 import { ThemeSwitch } from "../components/theme-switch";
 import { useEffect, useState } from "react";
 
@@ -18,11 +16,7 @@ const userInfo = {
 }
 
 export const Navbar = () => {
-  const [user, setUser] = useState(null);
-  useEffect(() => {
-    setUser(userInfo);
-  }, []);
-
+  const user = useSelector((state) => state.auth);
   return (
     <HeroUINavbar maxWidth="xl" position="sticky">
       <NavbarContent className="basis-1/5 sm:basis-full" justify="start">

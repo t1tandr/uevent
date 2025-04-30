@@ -10,6 +10,9 @@ import IconGoogle from "../icons/icons8-google.svg?react";
 import { authService } from "../services/auth.service";
 import { useNavigate } from "react-router-dom";
 
+import { useDispatch } from 'react-redux';
+import { login } from '../store/authSlice.js';
+
 const schema = z
   .object({
     name: z.string().min(1, "Name must be at least 1 character long"),
@@ -26,6 +29,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
 
   const {
     register,
@@ -50,7 +54,8 @@ export default function Register() {
       // Remove passwordConfirmation before sending to API
       const { passwordConfirmation, ...registerData } = data;
 
-      await authService.register(registerData);
+      const data = await authService.register(registerData);
+      dispatch(login(data));
       navigate("/");
     } catch (err) {
       setError(
@@ -185,9 +190,8 @@ export default function Register() {
 
               <div className="flex flex-col items-center justify-between">
                 <Link
-                  to="/login"
+                  href="/login"
                   className="text-primary"
-                  onClick={(e) => isLoading && e.preventDefault()}
                 >
                   Already have an account? Log in
                 </Link>

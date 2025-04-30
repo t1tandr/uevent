@@ -10,6 +10,9 @@ import IconGoogle from "../icons/icons8-google.svg?react";
 import { authService } from "../services/auth.service";
 import { useNavigate } from "react-router-dom";
 
+import { useDispatch } from 'react-redux';
+import { login } from '../store/authSlice.js';
+
 const schema = z.object({
   email: z.string().email("Invalid email"),
   password: z.string().min(6, "Password must be at least 6 characters long"),
@@ -20,6 +23,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const {
     register,
     handleSubmit,
@@ -38,7 +42,8 @@ export default function Login() {
     try {
       setIsLoading(true);
       setError(null);
-      await authService.login(data);
+      const data = await authService.login(data);
+      dispatch(login(data));
       navigate("/");
     } catch (err) {
       setError(
@@ -62,7 +67,8 @@ export default function Login() {
       const handleGoogleCallback = async () => {
         try {
           setIsLoading(true);
-          await authService.googleAuth(accessToken);
+          const data = await authService.googleAuth(accessToken);
+          dispatch(login(data));
           navigate("/");
         } catch (err) {
           setError("Google login failed. Please try again.");

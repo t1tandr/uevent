@@ -13,6 +13,7 @@ import CreateEventPage from "./pages/createEvent.jsx";
 import EditEventPage from "./pages/editEvent.jsx";
 import OtherProfilePage from "./pages/profileOther.jsx";
 import Error from "./pages/404.jsx";
+import CompanyPage from "./pages/company.jsx";
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
       <Route element={<CreateEventPage />} path="/event/create" />
       <Route element={<EditEventPage />} path="/event/edit/:id" />
       <Route element={<OtherProfilePage />} path="/profile/:id" />
+      <Route element={<CompanyPage />} path="/company/:id" />
       <Route element={<Error />} path="*" />
     </Routes>
   );

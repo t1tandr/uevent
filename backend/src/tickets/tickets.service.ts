@@ -9,6 +9,7 @@ import * as qrcode from 'qrcode'
 import { PaymentsService } from './payments.service'
 import { PDFService } from './pdf.service'
 import { MailService } from 'src/mail/mail.service'
+import { NotificationsService } from 'src/notifications/notifications.service'
 
 @Injectable()
 export class TicketsService {
@@ -16,6 +17,8 @@ export class TicketsService {
 		private prisma: PrismaService,
 		private paymentsService: PaymentsService,
 		private pdfService: PDFService,
+		private readonly notificationsService: NotificationsService,
+
 		private mailService: MailService
 	) {}
 

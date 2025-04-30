@@ -28,6 +28,7 @@ import { EventAttendeeService } from './services/event-atendee.service'
 import { JwtAuthGuard } from 'src/auth/guard/jwt.guard'
 import { PromoCodeService } from './services/promo-code.service'
 import { UpdatePromoCodeDto } from './dto/update-promocode.dto'
+import { UpdateEventDto } from './dto/update-event.dto'
 
 @Controller('events')
 export class EventsController {
@@ -224,6 +225,20 @@ export class EventsController {
 			CompanyRole.EDITOR
 		])
 		return this.promoCodeService.create(eventId, code, discount)
+	}
+
+	@Patch(':id')
+	@UseGuards(JwtAuthGuard)
+	async updateEvent(
+		@Param('id') eventId: string,
+		@CurrentUser('id') userId: string,
+		@Body() dto: UpdateEventDto
+	) {
+		await this.eventsService.checkEventAccess(eventId, userId, [
+			CompanyRole.OWNER,
+			CompanyRole.EDITOR
+		])
+		return this.eventsService.updateEvent(eventId, userId, dto)
 	}
 
 	@Patch(':eventId/promo-codes/:promoCodeId')

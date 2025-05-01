@@ -1,6 +1,10 @@
 import { axiosClassic, axiosWithAuth } from "../api/interceptors";
 
 export const companiesService = {
+  async getCompanyById(id) {
+    return axiosWithAuth.get(`/companies/${id}`);
+  },
+
   async create(data) {
     const formData = new FormData();
 

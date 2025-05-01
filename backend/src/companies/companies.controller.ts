@@ -11,6 +11,7 @@ import {
 	Post,
 	Query,
 	UploadedFile,
+	UseGuards,
 	UseInterceptors
 } from '@nestjs/common'
 import { CompaniesService } from './services/company.service'
@@ -20,9 +21,10 @@ import { CompanyRole, EventStatus } from '@prisma/client'
 import { CurrentUser } from 'src/auth/decorators/user.decorator'
 import { AddMemberDto } from './dto/add-member.dto'
 import { UpdateCompanyDto } from './dto/update-company.dto'
-import { AuthGuard } from 'src/auth/decorators/auth.decorator'
 import { CompanyMembersService } from './services/company-member.service'
 import { CreateCompanyDto } from './dto/create-company.dto'
+import { AuthGuard } from 'src/auth/decorators/auth.decorator'
+import { JwtAuthGuard } from 'src/auth/guard/jwt.guard'
 
 @Controller('companies')
 export class CompaniesController {
@@ -33,9 +35,18 @@ export class CompaniesController {
 	) {}
 
 	@Get('me')
-	@AuthGuard()
+	@UseGuards(JwtAuthGuard)
 	async getMyCompanies(@CurrentUser('id') userId: string) {
 		return this.companiesService.getMyCompanies(userId)
+	}
+
+	@Get(':id')
+	@AuthGuard()
+	async getCompanyById(
+		@Param('id') id: string,
+		@CurrentUser('id') userId: string
+	) {
+		return this.companiesService.getCompanyById(id, userId)
 	}
 
 	@Get('me/subscribed')

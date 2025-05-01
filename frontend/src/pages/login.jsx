@@ -10,8 +10,8 @@ import IconGoogle from "../icons/icons8-google.svg?react";
 import { authService } from "../services/auth.service";
 import { useNavigate } from "react-router-dom";
 
-import { useDispatch } from 'react-redux';
-import { login } from '../store/authSlice.js';
+import { useDispatch } from "react-redux";
+import { login } from "../store/authSlice.js";
 
 const schema = z.object({
   email: z.string().email("Invalid email"),
@@ -30,7 +30,6 @@ export default function Login() {
     formState: { errors, isValid },
   } = useForm({
     defaultValues: {
-      name: "",
       email: "",
       password: "",
     },
@@ -42,8 +41,8 @@ export default function Login() {
     try {
       setIsLoading(true);
       setError(null);
-      const data = await authService.login(data);
-      dispatch(login(data));
+      const response = await authService.login(data);
+      dispatch(login(response));
       navigate("/");
     } catch (err) {
       setError(

@@ -11,6 +11,7 @@ import {
   Input,
   Form,
 } from "@heroui/react";
+import { useDispatch } from "react-redux";
 import { getAccessToken } from "../services/auth-token.service";
 
 import { useForm } from "react-hook-form";
@@ -112,7 +113,7 @@ export default function ProfilePage() {
 
       setCompanies(
         companiesResponse.status === "fulfilled"
-          ? companiesResponse.value?.data || []
+          ? companiesResponse.value?.data?.map((member) => member.company) || []
           : []
       );
     } catch (err) {
@@ -403,7 +404,7 @@ export default function ProfilePage() {
         <Button
           color="secondary"
           className="mt-auto"
-          onClick={() => navigate("/company/create")}
+          onPress={() => navigate("/company/create")}
         >
           Create New Company
         </Button>

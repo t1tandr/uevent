@@ -23,7 +23,7 @@ export class CompaniesService {
 	) {}
 
 	async getMyCompanies(userId: string) {
-		return this.prisma.companyMember.findMany({
+		const members = await this.prisma.companyMember.findMany({
 			where: {
 				userId,
 				role: {
@@ -42,6 +42,54 @@ export class CompaniesService {
 				}
 			}
 		})
+
+		return members || []
+	}
+
+	async getCompanyById(id: string, userId: string) {
+		const company = await this.prisma.company.findUnique({
+			where: { id },
+			include: {
+				members: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								avatarUrl: true
+							}
+						}
+					}
+				},
+				events: {
+					include: {
+						attendees: {
+							where: {
+								userId
+							}
+						},
+						Category: true,
+						_count: {
+							select: {
+								attendees: true
+							}
+						}
+					},
+					orderBy: {
+						createdAt: 'desc'
+					}
+				},
+				_count: {
+					select: {
+						subscribers: true
+					}
+				}
+			}
+		})
+		if (!company) throw new NotFoundException('Company not found')
+
+		return company
 	}
 
 	async getMySubscribedCompanies(userId: string) {
@@ -135,42 +183,57 @@ export class CompaniesService {
 		dto: CreateCompanyDto,
 		logo?: Express.Multer.File
 	) {
-		let logoUrl: string | undefined
+		// Check if company with this email already exists
+		const existingCompany = await this.prisma.company.findUnique({
+			where: { email: dto.email }
+		})
 
-		console.log(userId)
+		if (existingCompany) {
+			throw new BadRequestException('Company with this email already exists')
+		}
+
+		let logoUrl: string | undefined
 
 		if (logo) {
 			logoUrl = await this.s3Service.uploadFile(logo, 'company-logos')
 		}
 
-		const company = await this.prisma.company.create({
-			data: {
-				...dto,
-				logoUrl,
-				members: {
-					create: {
-						userId,
-						role: CompanyRole.OWNER
+		try {
+			const company = await this.prisma.company.create({
+				data: {
+					...dto,
+					logoUrl,
+					members: {
+						create: {
+							userId,
+							role: CompanyRole.OWNER
+						}
 					}
-				}
-			},
-			include: {
-				members: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								email: true,
-								avatarUrl: true
+				},
+				include: {
+					members: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									name: true,
+									email: true,
+									avatarUrl: true
+								}
 							}
 						}
 					}
 				}
-			}
-		})
+			})
 
-		return company
+			return company
+		} catch (error) {
+			// If file was uploaded but company creation failed, delete the file
+			if (logoUrl) {
+				await this.s3Service.deleteFile(logoUrl).catch(console.error)
+			}
+			throw error
+		}
 	}
 
 	async findAll() {

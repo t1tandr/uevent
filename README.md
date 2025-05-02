@@ -120,7 +120,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 📬 Contact
 
-Nataliya Palii - npalii.work@gmail.com
+Nikita Palii - npalii.work@gmail.com
 
 Project Link: https://github.com/npalii/uevent
 

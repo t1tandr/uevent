@@ -9,10 +9,10 @@ import {
 } from '@prisma/client'
 
 export interface EventDetails extends Event {
-	organizer: {
+	Company: {
 		id: string
 		name: string
-		avatarUrl: string | null
+		logoUrl: string | null
 	}
 	attendees: {
 		id: string

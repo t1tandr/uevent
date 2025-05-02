@@ -96,8 +96,18 @@ export class EventsController {
 		@Query('format') format?: string,
 		@Query('theme') theme?: string,
 		@Query('date') date?: string,
-		@Query('priceMin', ParseFloatPipe) priceMin?: number,
-		@Query('priceMax', ParseFloatPipe) priceMax?: number,
+		@Query(
+			'priceMin',
+			new DefaultValuePipe(undefined),
+			new ParseFloatPipe({ optional: true })
+		)
+		priceMin?: number,
+		@Query(
+			'priceMax',
+			new DefaultValuePipe(undefined),
+			new ParseFloatPipe({ optional: true })
+		)
+		priceMax?: number,
 		@Query('category') category?: string,
 		@Query('location') location?: string
 	) {

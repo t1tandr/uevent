@@ -1,271 +1,363 @@
-import React from "react";
-import { Form, Input, Textarea, Button, DatePicker, NumberInput, Autocomplete, AutocompleteItem, Card, Modal, ModalBody, ModalHeader, useDisclosure, ModalContent } from "@heroui/react";
-import DefaultLayout from "../layouts/default.jsx";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Spotlight } from "../components/ui/spotlight-new";
+import { z } from "zod";
+import {
+  Input,
+  Button,
+  Textarea,
+  Switch,
+  Select,
+  SelectItem,
+} from "@nextui-org/react";
+import DefaultLayout from "../layouts/default";
 import { FileUpload } from "../components/ui/file-upload";
-import { now, getLocalTimeZone } from "@internationalized/date";
+import { eventsService } from "../services/event.service";
+import { PlacesAutocomplete } from "../components/ui/places-autocomplete";
+import { filtersService } from "../services/filters.service";
 
 const schema = z.object({
-  name: z.string().min(1, 'Name must be at least 1 character long'),
-  description: z.string().optional(),
-  date: z.any(),
-  location: z.string().min(1, 'Location must be at least 1 character long'),
-  price: z.coerce.number().min(0, 'Price must be a positive number'),
-  maxAttendees: z.coerce.number().min(1, 'Max attendees must be at least 1'),
-  format: z.string().min(1, 'Format is required'),
-  theme: z.string().min(1, 'Theme is required')
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  location: z.string().min(1, "Location is required"),
+  date: z.string().min(1, "Date is required"),
+  price: z.string().transform((val) => Number(val)),
+  maxAttendees: z
+    .string()
+    .optional()
+    .transform((val) => (val ? Number(val) : undefined)),
+  format: z.string().min(1, "Format is required"),
+  theme: z.string().min(1, "Theme is required"),
+  redirectUrl: z.string().url().optional().or(z.literal("")),
+  publishDate: z.string().min(1, "Publish date is required"),
 });
 
-const formats = [
-  { label: "Conferences", key: "conferences" },
-  { label: "Lecture", key: "lecture" },
-  { label: "Workshop", key: "workshop" }
-];
+export default function CreateEvent() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const companyId = searchParams.get("companyId");
 
-const themes = [
-  { label: "Cat", key: "cat" },
-  { label: "Dog", key: "dog" },
-  { label: "Elephant", key: "elephant" }
-];
+  const [formats, setFormats] = useState([]);
+  const [themes, setThemes] = useState([]);
+  const [files, setFiles] = useState([]);
+  const [isAttendeesHidden, setIsAttendeesHidden] = useState(false);
+  const [notifyOrganizer, setNotifyOrganizer] = useState(true);
+  const [promocodes, setPromocodes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [coordinates, setCoordinates] = useState(null);
 
-const promocodesData = [
-  { promocode: "123456", discount: 10 },
-  { promocode: "654321", discount: 20 },
-  { promocode: "abcdef", discount: 30 },
-  { promocode: "ghijkl", discount: 40 }
-]
-
-export default function createCompany() {
-  const [ err, setErr ] = React.useState(null);
-  const [files, setFiles] = React.useState([]);
-  const [promocodes, setPromocodes] = React.useState([]);
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-  const { register, handleSubmit, formState: { errors, isValid } } = useForm({
-    defaultValues: {
-      name: "",
-      description: "",
-      date: now(getLocalTimeZone()),
-      location: "",
-      price: "",
-      maxAttendees: "",
-      format: "",
-      theme: ""
-    },
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors, isValid },
+    watch,
+  } = useForm({
     resolver: zodResolver(schema),
-    mode: "onChange",
-  });
-
-  const { register: registerPromo, handleSubmit: handleSubmitPromo, formState: { errors: errorsPromo, isValid: isValidPromo } } = useForm({
     defaultValues: {
-      promocode: "",
-      discount: "",
+      publishDate: new Date().toISOString().split("T")[0],
+      price: "0",
     },
-    resolver: zodResolver(z.object({
-      promocode: z.string().min(1, 'Promocode must be at least 1 character long'),
-      discount: z.coerce.number().min(1, 'Discount must be at least 1').max(100, 'Discount must be at most 100')
-    })),
     mode: "onChange",
   });
 
-  const onSubmit = (data) => {
-    data.date = data.date.toDate(getLocalTimeZone()).toISOString();
-    console.log(data);
-  }
+  useEffect(() => {
+    const fetchFilters = async () => {
+      try {
+        const [formatsResponse, themesResponse] = await Promise.all([
+          filtersService.getFormats(),
+          filtersService.getThemes(),
+        ]);
 
-  const onSubmitPromo = (data) => {
-    console.log(data);
-    if (promocodes.find((promo) => promo.promocode === data.promocode)) {
-      setErr("Promocode already exists");
-      return;
+        console.log("Formats response:", formatsResponse);
+        console.log("Themes response:", themesResponse);
+
+        setFormats(formatsResponse || []);
+        setThemes(themesResponse || []);
+      } catch (err) {
+        console.error("Failed to fetch filters:", err);
+        setError("Failed to load event formats and themes");
+      }
+    };
+
+    fetchFilters();
+  }, []);
+
+  useEffect(() => {
+    if (!companyId) {
+      navigate("/");
     }
-    setErr(null);
-    setPromocodes((prev) => [...prev, data]);
-  }
+  }, [companyId, navigate]);
 
-  const handleFileUpload = (files) => {
-    setFiles(files);
-    console.log(files);
+  const handleLocationSelect = (address, latLng) => {
+    setValue("location", address);
+    setCoordinates(latLng);
   };
 
-  const modal = () => {
-    return (<Modal isOpen={isOpen} backdrop="blur" placement="center" onOpenChange={onOpenChange} className="z-50">
-      <ModalContent>
-        {(onClose) => (
-          <>
-            <ModalHeader className="flex flex-col gap-1">Add promocode</ModalHeader>
-            <ModalBody className="p-5">
-              <Form
-                className="flex flex-col w-full gap-5"
-                validationErrors={errorsPromo}
-                onSubmit={handleSubmitPromo(onSubmitPromo)}>
-                <Input
-                  {...registerPromo("promocode", { required: "promocode is required" })}
-                  isRequired
-                  errorMessage={errorsPromo.promocode?.message}
-                  isInvalid={!!errorsPromo.promocode}
-                  label="Promocode"
-                  name="promocode"
-                  placeholder="Enter promocode"
-                />
-                <Input
-                  {...registerPromo("discount", { required: "discount is required" })}
-                  isRequired
-                  errorMessage={errorsPromo.discount?.message}
-                  isInvalid={!!errorsPromo.discount}
-                  label="Discount"
-                  name="discount"
-                  placeholder="Enter discount"
-                />
+  const handleFileUpload = (uploadedFiles) => {
+    setFiles(uploadedFiles);
+  };
 
-                <div className="w-full flex flex-row justify-end gap-4">
-                  <Button color="danger" variant="light" onPress={onClose}>
-                    Cansel
-                  </Button>
-                  <Button color="primary" type="submit" onPress={onClose} isDisabled={!isValidPromo}>
-                    Accept
-                  </Button>
-                </div>
-              </Form>
-            </ModalBody>
-          </>
-        )}
-      </ModalContent>
-    </Modal>
-    )
-  }
+  const addPromoCode = () => {
+    setPromocodes([...promocodes, { code: "", discount: 0 }]);
+  };
+
+  const removePromoCode = (index) => {
+    setPromocodes(promocodes.filter((_, i) => i !== index));
+  };
+
+  const updatePromoCode = (index, field, value) => {
+    const updated = [...promocodes];
+    updated[index][field] = value;
+    setPromocodes(updated);
+  };
+
+  const onSubmit = async (data) => {
+    try {
+      console.log("Start form submission");
+      setLoading(true);
+      setError(null);
+
+      const eventData = {
+        title: data.title,
+        description: data.description,
+        location: data.location,
+        date: new Date(data.date).toISOString(),
+        price: parseFloat(data.price),
+        maxAttendees: data.maxAttendees
+          ? parseInt(data.maxAttendees)
+          : undefined,
+        format: data.format,
+        theme: data.theme,
+        redirectUrl: data.redirectUrl || undefined,
+        publishDate: new Date(data.publishDate).toISOString(),
+        companyId,
+        isAttendeesHidden: Boolean(isAttendeesHidden),
+        notifyOrganizer: Boolean(notifyOrganizer),
+        promoCodes:
+          promocodes.length > 0
+            ? promocodes.map((promo) => ({
+                code: promo.code,
+                discount: parseFloat(promo.discount),
+              }))
+            : undefined,
+        coordinates: coordinates
+          ? {
+              latitude: parseFloat(coordinates.lat),
+              longitude: parseFloat(coordinates.lng),
+            }
+          : undefined,
+      };
+
+      console.log("Event data before submission:", eventData);
+
+      const response = await eventsService.create(eventData, files);
+      console.log("Response:", response);
+
+      navigate(`/company/${companyId}`);
+    } catch (err) {
+      console.error("Error details:", {
+        message: err.message,
+        response: err.response,
+        stack: err.stack,
+      });
+      setError(err.response?.data?.message || "Failed to create event");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <DefaultLayout>
-      <Spotlight />
-      {modal()}
-      <div className="flex flex-col gap-10 rounded-lg w-full p-10">
-        <h1 className="text-4xl font-bold text-center text-default-900">
-          Create event
-        </h1>
-        <Form
-          className="mx-auto w-full gap-5"
-          validationErrors={errors}
-          onSubmit={handleSubmit(onSubmit)}>
+      <div className="max-w-4xl mx-auto p-6 space-y-8">
+        <h1 className="text-2xl font-bold">Create New Event</h1>
 
+        <form
+          onSubmit={handleSubmit(onSubmit, (errors) => {
+            console.log("Form validation failed:", errors);
+          })}
+          className="space-y-6"
+        >
           <Input
-            {...register("name", { required: "Name is required" })}
-            isRequired
-            errorMessage={errors.name?.message}
-            isInvalid={!!errors.name}
-            label="Name"
-            name="name"
-            placeholder="Enter your name"
+            label="Title"
+            {...register("title")}
+            errorMessage={errors.title?.message}
           />
 
           <Textarea
+            label="Description"
             {...register("description")}
             errorMessage={errors.description?.message}
-            isInvalid={!!errors.description}
-            label="Description"
-            name="description"
-            placeholder="Enter your description"
           />
 
-          <div className="flex flex-col gap-4 md:flex-row w-full">
-            <DatePicker
-              {...register("date", { required: "Date is required" })}
-              isRequired
-              errorMessage={errors.date?.message}
-              isInvalid={!!errors.date}
-              hideTimeZone
-              defaultValue={now(getLocalTimeZone())}
-              selectorButtonPlacement="start"
+          <PlacesAutocomplete
+            onSelect={handleLocationSelect}
+            defaultValue=""
+            error={errors.location?.message}
+            register={register}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              type="datetime-local"
               label="Event Date"
+              {...register("date")}
+              errorMessage={errors.date?.message}
             />
 
             <Input
-              {...register("location", { required: "location is required" })}
-              isRequired
-              errorMessage={errors.location?.message}
-              isInvalid={!!errors.location}
-              label="Location"
-              name="location"
-              placeholder="Enter your location"
-            />
-          </div>
-
-
-          <div className="flex flex-col gap-4 md:flex-row w-full">
-            <NumberInput
-              {...register("price", { required: "Price is required" })}
-              isRequired
-              errorMessage={errors.price?.message}
-              isInvalid={!!errors.price}
+              type="number"
               label="Price"
-              name="price"
-              placeholder="Enter price"
-            />
-
-            <NumberInput
-              {...register("maxAttendees", { required: "max attendees is required" })}
-              errorMessage={errors.maxAttendees?.message}
-              isInvalid={!!errors.maxAttendees}
-              label="Max attendees"
-              name="maxAttendees"
-              placeholder="Enter max attendees"
+              {...register("price")}
+              errorMessage={errors.price?.message}
             />
           </div>
 
-          <div className="flex flex-col gap-4 md:flex-row w-full">
-            <Autocomplete
-              {...register("format", { required: "Format is required" })}
-              isRequired
-              errorMessage={errors.format?.message}
-              isInvalid={!!errors.format}
-              defaultItems={formats}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Select
               label="Format"
-              name="format"
-              placeholder="Choose a format"
+              isInvalid={!!errors.format}
+              errorMessage={errors.format?.message}
+              defaultSelectedKeys={[]}
+              {...register("format")}
             >
-              {(format) => <AutocompleteItem key={format.key}>{format.label}</AutocompleteItem>}
-            </Autocomplete>
+              {Array.isArray(formats) &&
+                formats.map((format) => (
+                  <SelectItem key={format.id} value={format.id}>
+                    {format.label}
+                  </SelectItem>
+                ))}
+            </Select>
 
-            <Autocomplete
-              {...register("theme", { required: "Theme is required" })}
-              isRequired
-              errorMessage={errors.theme?.message}
-              isInvalid={!!errors.theme}
-              defaultItems={themes}
+            <Select
               label="Theme"
-              name="theme"
-              placeholder="Choose a theme"
+              isInvalid={!!errors.theme}
+              errorMessage={errors.theme?.message}
+              defaultSelectedKeys={[]}
+              {...register("theme")}
             >
-              {(theme) => <AutocompleteItem key={theme.key}>{theme.label}</AutocompleteItem>}
-            </Autocomplete>
+              {Array.isArray(themes) &&
+                themes.map((theme) => (
+                  <SelectItem key={theme.id} value={theme.id}>
+                    {theme.label}
+                  </SelectItem>
+                ))}
+            </Select>
           </div>
 
-          <div className="w-full flex gap-2 justify-center items-center">
-            <FileUpload onChange={handleFileUpload} />
+          <Input
+            type="number"
+            label="Max Attendees (optional)"
+            {...register("maxAttendees")}
+            errorMessage={errors.maxAttendees?.message}
+          />
+
+          <Input
+            type="url"
+            label="Redirect URL (optional)"
+            {...register("redirectUrl")}
+            errorMessage={errors.redirectUrl?.message}
+          />
+
+          <Input
+            type="date"
+            label="Publish Date"
+            {...register("publishDate")}
+            errorMessage={errors.publishDate?.message}
+          />
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">Event Images</h3>
+            <FileUpload
+              multiple
+              onChange={handleFileUpload}
+              accept="image/*"
+              maxFiles={10}
+            />
           </div>
 
-          <div className="flex flex-wrap gap-4">
-            {promocodes && promocodes.map((promo, index) => (
-              <Card key={index} className="flex flex-col justify-start items-center gap-4 p-4">
-                <p className="text-lg md:text-xl">Promo:{promo.promocode}</p>
-                <h1>Discont:{promo.discount}%</h1>
-              </Card>
+          <div className="flex gap-6">
+            <Switch
+              isSelected={isAttendeesHidden}
+              onValueChange={setIsAttendeesHidden}
+            >
+              Hide Attendees List
+            </Switch>
+
+            <Switch
+              isSelected={notifyOrganizer}
+              onValueChange={setNotifyOrganizer}
+            >
+              Notify About New Attendees
+            </Switch>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Promo Codes</h3>
+              <Button
+                color="primary"
+                variant="flat"
+                onPress={addPromoCode}
+                size="sm"
+              >
+                Add Promo Code
+              </Button>
+            </div>
+
+            {promocodes.map((promo, index) => (
+              <div key={index} className="flex gap-4 items-center">
+                <Input
+                  placeholder="Code"
+                  value={promo.code}
+                  onChange={(e) =>
+                    updatePromoCode(index, "code", e.target.value)
+                  }
+                />
+                <Input
+                  type="number"
+                  placeholder="Discount %"
+                  value={promo.discount}
+                  onChange={(e) =>
+                    updatePromoCode(index, "discount", Number(e.target.value))
+                  }
+                />
+                <Button
+                  color="danger"
+                  variant="light"
+                  onPress={() => removePromoCode(index)}
+                  size="sm"
+                >
+                  Remove
+                </Button>
+              </div>
             ))}
-            <Card isPressable onPress={onOpen} className="flex flex-col justify-center items-center p-4">
-              <p className="text-xl">Add promo</p>
-            </Card>
           </div>
 
-          {err && <p className="text-red-500">{err}</p>}
-          <div className="flex flex-col gap-4 w-full">
-            <Button className="w-full" color="primary" type="submit" >
-              Create event
+          {error && <div className="text-red-500 text-center p-4">{error}</div>}
+
+          <div className="flex justify-end gap-4">
+            <Button
+              color="danger"
+              variant="light"
+              onPress={() => navigate(`/company/${companyId}`)}
+            >
+              Cancel
+            </Button>
+            <Button
+              color="primary"
+              type="submit"
+              isLoading={loading}
+              disabled={loading}
+              onPress={(e) => {
+                console.log("Submit button clicked");
+              }}
+            >
+              Create Event
             </Button>
           </div>
-        </Form>
-
+        </form>
       </div>
     </DefaultLayout>
   );

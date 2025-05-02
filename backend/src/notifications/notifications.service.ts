@@ -11,6 +11,103 @@ export class NotificationsService {
 		private mailService: MailService
 	) {}
 
+	async createNotification(dto: {
+		userId: string
+		type: NotificationType
+		title: string
+		message: string
+		eventId?: string
+		companyId?: string
+	}) {
+		return this.create({
+			userId: dto.userId,
+			type: dto.type,
+			message: dto.message,
+			eventId: dto.eventId,
+			companyId: dto.companyId
+		})
+	}
+
+	async createTicketPurchasedNotification(ticketId: string) {
+		try {
+			const ticket = await this.prisma.ticket.findUnique({
+				where: { id: ticketId },
+				include: {
+					event: true,
+					user: true
+				}
+			})
+
+			if (!ticket) {
+				console.error(`Ticket with ID ${ticketId} not found`)
+				return
+			}
+
+			// Создаем уведомление для покупателя билета
+			await this.create({
+				message: `Your ticket for "${ticket.event.title}" has been purchased successfully`,
+				type: NotificationType.TICKET_PURCHASED,
+				userId: ticket.userId,
+				eventId: ticket.eventId
+			})
+
+			console.log(
+				`Ticket purchase notification created for user ${ticket.userId}`
+			)
+		} catch (error) {
+			console.error('Error creating ticket purchase notification:', error)
+		}
+	}
+
+	async createNewAttendeeNotification(eventId: string, attendeeId: string) {
+		try {
+			const [event, attendee] = await Promise.all([
+				this.prisma.event.findUnique({
+					where: { id: eventId },
+					include: { organizer: true }
+				}),
+				this.prisma.user.findUnique({
+					where: { id: attendeeId }
+				})
+			])
+
+			if (!event || !attendee) {
+				console.error(
+					`Event or attendee not found. EventID: ${eventId}, AttendeeID: ${attendeeId}`
+				)
+				return
+			}
+
+			if (!event.notifyOrganizer) {
+				console.log(
+					`Skipping notification for event ${eventId} - notifyOrganizer is disabled`
+				)
+				return
+			}
+
+			// Создаем уведомление в системе
+			await this.create({
+				message: `${attendee.name} has registered for your event "${event.title}"`,
+				type: NotificationType.NEW_ATTENDEE,
+				userId: event.organizerId,
+				eventId
+			})
+
+			// Отправляем email уведомление если есть organizerEmail
+			await this.mailService.sendNewAttendeeNotification(
+				event.organizer,
+				event,
+				attendee
+			)
+
+			console.log(
+				`New attendee notification created for organizer ${event.organizerId}`
+			)
+		} catch (error) {
+			console.error('Error creating new attendee notification:', error)
+		}
+	}
+
 	async getUserNotifications(userId: string) {
 		return this.prisma.notification.findMany({
 			where: {
@@ -106,34 +203,6 @@ export class NotificationsService {
 		])
 	}
 
-	async createNewAttendeeNotification(eventId: string, attendeeId: string) {
-		const [event, attendee] = await Promise.all([
-			this.prisma.event.findUnique({
-				where: { id: eventId },
-				include: { organizer: true }
-			}),
-			this.prisma.user.findUnique({
-				where: { id: attendeeId }
-			})
-		])
-
-		if (event.notifyOrganizer) {
-			await Promise.all([
-				this.create({
-					message: `${attendee.name} has registered for ${event.title}`,
-					type: NotificationType.NEW_ATTENDEE,
-					userId: event.organizerId,
-					eventId
-				}),
-				this.mailService.sendNewAttendeeNotification(
-					event.organizer,
-					event,
-					attendee
-				)
-			])
-		}
-	}
-
 	async createOrganizerUpdateNotification(eventId: string, message: string) {
 		const event = await this.prisma.event.findUnique({
 			where: { id: eventId },
@@ -156,23 +225,55 @@ export class NotificationsService {
 		await Promise.all([...notifications])
 	}
 
-	async createTicketPurchasedNotification(ticketId: string) {
-		const ticket = await this.prisma.ticket.findUnique({
-			where: { id: ticketId },
-			include: {
-				event: true,
-				user: true
-			}
-		})
-
-		await Promise.all([
-			this.create({
-				message: `Your ticket for ${ticket.event.title} has been purchased`,
-				type: NotificationType.TICKET_PURCHASED,
-				userId: ticket.userId,
-				eventId: ticket.eventId
+	async createNewEventNotification(eventId: string) {
+		try {
+			const event = await this.prisma.event.findUnique({
+				where: { id: eventId },
+				include: {
+					Company: {
+						include: {
+							subscribers: {
+								include: {
+									user: true
+								}
+							}
+						}
+					}
+				}
 			})
-		])
+
+			if (!event || !event.Company) {
+				console.log(
+					`Event ${eventId} not found or not associated with a company`
+				)
+				return
+			}
+
+			const { Company: company } = event
+
+			if (!company.subscribers || company.subscribers.length === 0) {
+				console.log(`Company ${company.id} has no subscribers`)
+				return
+			}
+
+			const notifications = company.subscribers.map(subscriber =>
+				this.create({
+					message: `New event "${event.title}" has been created by ${company.name}`,
+					type: NotificationType.COMPANY_UPDATE,
+					userId: subscriber.userId,
+					eventId: event.id,
+					companyId: company.id
+				})
+			)
+
+			await Promise.all([...notifications])
+
+			console.log(
+				`Sent notifications about new event ${event.title} to ${company.subscribers.length} subscribers`
+			)
+		} catch (error) {
+			console.error('Error creating new event notifications:', error)
+		}
 	}
 
 	async createCompanyUpdateNotification(companyId: string, message: string) {
@@ -192,6 +293,4 @@ export class NotificationsService {
 
 		await Promise.all([...notifications])
 	}
-
-	// ... existing methods ...
 }

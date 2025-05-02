@@ -1,376 +1,620 @@
-import { Button, Image, Spinner, Card, CardHeader, CardBody, CardFooter, Switch, Tabs, Tab, Avatar, Textarea, Modal, ModalBody, ModalHeader, ModalFooter, Divider, useDisclosure, ModalContent, Input } from "@heroui/react";
 import { useState, useEffect } from "react";
-import DefaultLayout from "../layouts/default";
 import { useParams, useNavigate } from "react-router-dom";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { useTheme } from "next-themes";
-
-const dataTest =
-{
-  author: "John Doe",
-  authorInfo: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-  location: [51.505, -0.09],
-  date: "2023-10-01",
-  visitors: 50,
-  price: 100,
-  title: "Breathing App",
-  description: "Get a good night's sleep. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-};
-
-const dataTest2 = [
-  { id: 1, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 2, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 3, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 4, title: "Breathing App", description: "Get a good night's sleep." }
-];
-
-const relevantData = [
-  { id: 1, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 2, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-  { id: 3, title: "Breathing App", description: "Get a good night's sleep.", image: "https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=MnwzNjUyOXwwfDF8c2VhcmNofDJ8fGJsdXUlMjBzaWxlbnxlbnwwfHx8fDE2OTI3NTY5NzE&ixlib=rb-4.0.3&q=80&w=1080" },
-];
-
-const userData = [
-  { id: 1, name: "John Doe", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d" },
-  { id: 2, name: "Jane Doe", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d" },
-  { id: 3, name: "John Smith", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d" },
-  { id: 4, name: "Jane Smith", avatar: "https://i.pravatar.cc/150?u=a042581f4e29026024d" }
-];
-
-const commentsData = [
-  { id: 1, name: "John Doe", content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua." },
-  { parent_comment: 1, id: 2, name: "Jane Doe", content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua." },
-  { id: 3, name: "John Smith", content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua." },
-  { id: 4, name: "Jane Smith", content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua." }
-];
-
-const organizationData = {
-  name: "nexo",
-  description: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
-  folow: true
-}
+import DefaultLayout from "../layouts/default";
+import { eventsService } from "../services/event.service";
+import { commentsService } from "../services/comment.service";
+import { ticketsService } from "../services/ticket.service";
+import { companiesService } from "../services/company.service";
+import { getAccessToken } from "../services/auth-token.service";
+import {
+  Button,
+  Image,
+  Spinner,
+  Card,
+  CardHeader,
+  CardBody,
+  CardFooter,
+  Tabs,
+  Tab,
+  Avatar,
+  Textarea,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  useDisclosure,
+  Badge,
+  Chip,
+} from "@nextui-org/react";
+import "leaflet/dist/leaflet.css";
 
 export default function EventPage() {
-  const { theme, setTheme } = useTheme();
-  const [post, setPost] = useState(null);
-  const [data, setData] = useState(null);
-  const [users, setUsers] = useState(null);
-  const [IsSelectedMap, setIsSelectedMap] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [newCommentContent, setNewCommentContent] = useState('');
-  const [parentComment, setParentComment] = useState(null);
-  const [userComment, setUserComment] = useState(null);
-  const [organization, setOrganization] = useState(null);
-  const [relevant, setRelevant] = useState(null);
-  const [promocode, setPromocode] = useState(null);
-  const navigate = useNavigate();
-
-  const { isOpen, onOpen, onOpenChange } = useDisclosure();
-
   const { id } = useParams();
-  const mapUrl = IsSelectedMap ? "https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png" :
-    theme === "dark"
+  const navigate = useNavigate();
+  const { theme } = useTheme();
+  const { isOpen, onOpen, onOpenChange } = useDisclosure();
+  const isLoggedIn = !!getAccessToken();
+
+  const [event, setEvent] = useState(null);
+  const [companyEvents, setCompanyEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [IsSelectedMap, setIsSelectedMap] = useState(false);
+  const [newCommentContent, setNewCommentContent] = useState("");
+  const [parentCommentId, setParentCommentId] = useState(null);
+  const [promocode, setPromocode] = useState("");
+  const [purchaseLoading, setPurchaseLoading] = useState(false);
+  const [purchaseError, setPurchaseError] = useState(null);
+  const [hasTicket, setHasTicket] = useState(false);
+  const [ticketCheckLoading, setTicketCheckLoading] = useState(true);
+
+  const mapUrl = IsSelectedMap
+    ? "https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png"
+    : theme === "dark"
       ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
       : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png";
 
   useEffect(() => {
-    setPost(dataTest);
-    setData(dataTest2);
-    setUsers(userData);
-    setComments(commentsData);
-    setOrganization(organizationData);
-    setRelevant(relevantData);
-  }, []);
-
-  const handleFollowUnfollow = () => {
-    setOrganization((prev) => ({
-      ...prev,
-      folow: !prev.folow
-    }));
-  }
-
-  const handlePayment = async (type) => {
-    if (type === "with") {
-
+    fetchEventData();
+    if (isLoggedIn) {
+      checkTicket();
     } else {
-
+      setTicketCheckLoading(false);
     }
-  }
+  }, [id, isLoggedIn]);
+
+  const fetchEventData = async () => {
+    try {
+      setLoading(true);
+      const response = await eventsService.getById(id);
+      setEvent(response.data);
+
+      if (response.data.Company?.id) {
+        fetchCompanyEvents(response.data.Company.id);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCompanyEvents = async (companyId) => {
+    try {
+      const response = await companiesService.getCompanyEvents(companyId, {
+        status: "PUBLISHED",
+      });
+      const otherEvents = response.data.data.filter((e) => e.id !== id);
+      setCompanyEvents(otherEvents);
+    } catch (err) {
+      console.error("Failed to load company events:", err);
+    }
+  };
+
+  const checkTicket = async () => {
+    try {
+      setTicketCheckLoading(true);
+      const tickets = await ticketsService.getUserTickets();
+      const hasEventTicket = tickets.some(
+        (ticket) => ticket.eventId === id && ticket.status === "ACTIVE"
+      );
+      setHasTicket(hasEventTicket);
+    } catch (err) {
+      console.error("Failed to check ticket:", err);
+    } finally {
+      setTicketCheckLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
 
   const handleCreateComment = async () => {
     try {
-      parentComment === null ? await axiosConfigurated.post('/posts/' + id + '/comments', { content: newCommentContent }) :
-        await axiosConfigurated.post('/posts/' + id + '/comments', { content: newCommentContent, parent_comment: parentComment });
-      setNewCommentContent('');
-      //updateComments();
-    } catch (error) {
-      console.error('Error:', error);
+      await commentsService.createComment({
+        content: newCommentContent,
+        eventId: id,
+        parentId: parentCommentId,
+      });
+      setNewCommentContent("");
+      setParentCommentId(null);
+      fetchEventData();
+    } catch (err) {
+      console.error("Failed to create comment:", err);
     }
   };
 
   const handleReply = (commentId) => {
-    console.log(commentId);
-    if (parentComment === commentId) {
-      setParentComment(null);
-      return;
-    }
-    setParentComment(commentId);
-  }
-
-  const updateComments = () => {
-    axiosConfigurated.get('/posts/' + id + '/comments').then(async (response) => {
-      setComments(response.data);
-      const comments = response.data;
-
-      const userPromises = comments.map(comment => getUserData(comment.author));
-      const users = await Promise.all(userPromises);
-      const userMap = users.reduce((acc, user, i) => {
-        acc[comments[i].author] = user.data;
-        return acc;
-      }, {});
-
-      setUserComment(userMap);
-    }).catch((error) => {
-      console.error('Error:', error);
-    });
-  }
-
-  const commentRes = () => {
-    const commentWithReplies = {};
-    const commentResult = [];
-
-    comments.forEach((comment) => {
-      commentWithReplies[comment.id] = { ...comment, subComments: [] };
-    });
-
-    comments.forEach((comment) => {
-      if (comment.parent_comment) {
-        commentWithReplies[comment.parent_comment]?.subComments.push(commentWithReplies[comment.id]);
-      } else {
-        commentResult.push(commentWithReplies[comment.id]);
-      }
-    });
-
-    return commentResult;
-  }
+    setParentCommentId(parentCommentId === commentId ? null : commentId);
+  };
 
   const renderComments = (comments) => {
-    return comments.map((comment) => {
-      /*       const user = userData[comment.author];
-            if (!user) {
-              return <Spinner key={comment.id} />;
-            } */
+    if (!comments || comments.length === 0) {
       return (
-        <Card className={`ml-${comment.parent_comment ? 20 : 0} p-4`}>
-          <div className="flex flex-row gap-2">
-            {/* <Avatar src={user.avatar} />
-            <p size="lg">{user.login}</p> */}
-            <Button onPress={() => handleReply(comment.id)} size="sm" className={`${parentComment === comment.id ? 'bg-purple-400' : 'bg-zinc-300 dark:bg-zinc-700'}`}>Reply</Button>
-          </div>
-          <p className="text-gray-500">{comment.content}</p>
-          {comment.subComments.length > 0 && (
-            <div className="flex flex-col gap-5" style={{ marginTop: 10 }}>
-              {renderComments(comment.subComments)}
-            </div>
-          )}
-        </Card>
+        <div className="text-center py-8 text-gray-500">
+          No comments yet. Be the first to comment!
+        </div>
       );
-    });
-  }
+    }
 
-  const usersCard = () => {
-    return (users && users.map((user, index) => (
-      <Card key={index} isPressable onPress={() => navigate(`/profile/${user.id}`)} className="flex flex-row w-full justify-start items-center gap-4 p-1">
-        <img
-          src={user.avatar}
-          alt="Background blur"
-          className="absolute top-0 left-0 w-full h-full object-contain blur-lg opacity-20"
-        />
-        <Avatar size="lg" src={user.avatar} />
-        <h1>{user.name}</h1>
+    return comments.map((comment) => (
+      <Card
+        key={comment.id}
+        className={`${comment.parentId ? "ml-10" : ""} mb-4`}
+      >
+        <CardHeader className="flex gap-3">
+          <Avatar src={comment.user.avatarUrl || "/default-avatar.png"} />
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <p className="font-medium">{comment.user.name}</p>
+              <span className="text-tiny text-gray-400">
+                {new Date(comment.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+            {isLoggedIn && (
+              <Button
+                size="sm"
+                variant="light"
+                onPress={() => handleReply(comment.id)}
+                color={parentCommentId === comment.id ? "primary" : "default"}
+                className="justify-start px-0"
+              >
+                Reply
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardBody>
+          <p className="text-sm">{comment.content}</p>
+        </CardBody>
       </Card>
-    )))
+    ));
   };
 
-  const card = () => {
-    return (data && data.map((post, index) => (
-      <Card key={index} isPressable onPress={() => navigate(`/event/${post.id}`)} className="group/card">
-        <div className={"overflow-hidden relative rounded-md shadow-xl h-full max-w-sm flex flex-col p-4"}>
-          <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-gray-400 dark:group-hover/card:bg-black opacity-60"></div>
-          <img className="absolute top-0 left-0 w-full h-full object-contain blur-lg opacity-20" src={post?.image} />
-          <CardHeader>
-            <h2 className="dark:text-white/90 text-black/90 font-medium text-xl">{post.title}</h2>
-          </CardHeader>
+  const handlePurchaseTicket = async () => {
+    try {
+      setPurchaseLoading(true);
+      setPurchaseError(null);
 
-          {post.image && <CardBody>
-            <div className="rounded-lg overflow-hidden flex justify-center items-center h-60">
-              <Image
-                src={post?.image}
-                alt={post.title}
-                loading="lazy"
-              />
-            </div>
-          </CardBody>}
+      console.log("Initiating ticket purchase for event:", id);
+      console.log("With promocode:", promocode || "none");
 
-          <CardFooter>
-            <div className="flex flex-grow gap-2 items-center">
-              <p className="dark:text-white/60 text-black/60">{post.description}</p>
-            </div>
-          </CardFooter>
+      const response = await ticketsService.initiateTicketPurchase(
+        id,
+        promocode || undefined
+      );
 
-        </div>
-      </Card>
-    )))
+      console.log("Checkout response:", response);
+
+      if (!response || !response.url) {
+        throw new Error("Invalid response from server");
+      }
+
+      window.location.href = response.url;
+    } catch (err) {
+      console.error("Purchase error details:", err);
+
+      let errorMessage = "Failed to process purchase";
+      if (err.response) {
+        console.log("Error response:", err.response);
+        errorMessage = err.response.data?.message || errorMessage;
+      } else if (err.request) {
+        errorMessage = "No response from server. Check your connection.";
+      } else {
+        errorMessage = err.message || errorMessage;
+      }
+
+      setPurchaseError(errorMessage);
+    } finally {
+      setPurchaseLoading(false);
+    }
   };
 
-  const cardRelevant = () => {
-    return (relevant && relevant.map((post, index) => (
-      <Card key={index} isPressable onPress={() => navigate(`/event/${post.id}`)} className="group/card">
-        <div className={"overflow-hidden relative rounded-md shadow-xl h-full max-w-sm flex flex-col p-4"}>
-          <div className="absolute w-full h-full top-0 left-0 transition duration-300 group-hover/card:bg-gray-400 dark:group-hover/card:bg-black opacity-60"></div>
-          <img className="absolute top-0 left-0 w-full h-full object-contain blur-lg opacity-20" src={post?.image} />
-          <CardHeader>
-            <h2 className="dark:text-white/90 text-black/90 font-medium text-xl">{post.title}</h2>
-          </CardHeader>
-
-          {post.image && <CardBody>
-            <div className="rounded-lg overflow-hidden flex justify-center items-center h-60">
-              <Image
-                src={post?.image}
-                alt={post.title}
-                loading="lazy"
-              />
-            </div>
-          </CardBody>}
-
-          <CardFooter>
-            <div className="flex flex-grow gap-2 items-center">
-              <p className="dark:text-white/60 text-black/60">{post.description}</p>
-            </div>
-          </CardFooter>
-
-        </div>
-      </Card>
-    )))
+  const testCardInfo = {
+    number: "4242 4242 4242 4242",
+    expiry: "Any future date",
+    cvc: "Any 3 digits",
   };
 
-  const modal = () => {
-    return (<Modal isOpen={isOpen} backdrop="blur" placement="center" onOpenChange={onOpenChange} className="z-50">
-      <ModalContent>
-        {(onClose) => (
-          <>
-            <ModalHeader className="flex flex-col gap-1">Modal Title</ModalHeader>
-            <ModalBody>
-              <p>Do you have a promo code? If so, enter it below</p>
-              <Input label="Promocode" placeholder="Enter your promocode" value={promocode} onValueChange={setPromocode} />
-            </ModalBody>
-            <ModalFooter>
-              <Button color="danger" variant="light" onPress={onClose}>
-                Cansel
-              </Button>
-              <Button onPress={() => handlePayment()}>
-                Skip
-              </Button>
-              <Button color="primary" onPress={() => handlePayment("with")}>
-                Accept
-              </Button>
-            </ModalFooter>
-          </>
+  const EventCard = ({ event }) => (
+    <Card
+      isPressable
+      onPress={() => navigate(`/event/${event.id}`)}
+      className="overflow-hidden"
+    >
+      <div className="relative">
+        {event.imagesUrls?.length > 0 ? (
+          <Image
+            src={event.imagesUrls[0]}
+            alt={event.title}
+            width="100%"
+            height={140}
+            radius="none"
+            className="object-cover w-full h-36"
+          />
+        ) : (
+          <div className="bg-gradient-to-br from-primary-100 to-secondary-100 dark:from-primary-900 dark:to-secondary-900 h-36 w-full" />
         )}
-      </ModalContent>
-    </Modal>
-    )
-  }
+        <div className="absolute top-2 right-2">
+          <Chip color="primary" size="sm">
+            ${event.price}
+          </Chip>
+        </div>
+      </div>
 
-  if (!post) {
+      <CardBody className="p-3">
+        <h3 className="text-lg font-semibold line-clamp-1">{event.title}</h3>
+        <p className="text-xs text-gray-500 mt-1">{formatDate(event.date)}</p>
+        <p className="text-sm line-clamp-2 mt-2">{event.description}</p>
+      </CardBody>
+
+      <CardFooter className="flex justify-between items-center p-3 pt-0">
+        <Chip size="sm" variant="flat">
+          {event.format}
+        </Chip>
+        <span className="text-xs">{event.location}</span>
+      </CardFooter>
+    </Card>
+  );
+
+  if (loading)
     return (
       <DefaultLayout>
-        <Spinner />
+        <div className="flex justify-center items-center h-96">
+          <Spinner size="lg" />
+        </div>
       </DefaultLayout>
     );
-  }
+
+  if (error)
+    return (
+      <DefaultLayout>
+        <div className="text-center text-red-500">
+          Error loading event: {error}
+        </div>
+      </DefaultLayout>
+    );
+
+  if (!event) return null;
 
   return (
     <DefaultLayout>
-      {modal()}
-      <section className="flex flex-col gap-10">
-        <div className="flex flex-row justify-between">
-          <h1 className="text-2xl md:text-4xl font-bold">{post.title}</h1>
-          <h3 className="text-xl md:text-2xl">{post.date}</h3>
-        </div>
-        {post.image && <div className="relative">
-          <div className="absolute inset-0 bg-center blur-md" style={{ backgroundImage: `url(${post?.image})` }} />
-          <div className="rounded-lg overflow-hidden flex justify-center items-center">
+      {/* Purchase Modal */}
+      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader>Purchase Ticket</ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col gap-4">
+                  <div className="flex justify-between">
+                    <span>Event:</span>
+                    <span className="font-medium">{event.title}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Price:</span>
+                    <span className="font-medium">${event.price}</span>
+                  </div>
+
+                  <Input
+                    label="Promocode"
+                    placeholder="Enter your promocode (optional)"
+                    value={promocode}
+                    onValueChange={setPromocode}
+                  />
+
+                  <div className="mt-2 p-3 bg-gray-100 dark:bg-gray-800 rounded text-sm">
+                    <p className="font-semibold mb-1">Test Card Details:</p>
+                    <p>Number: {testCardInfo.number}</p>
+                    <p>Expiry: {testCardInfo.expiry}</p>
+                    <p>CVC: {testCardInfo.cvc}</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This is a test mode - no real charges will be made
+                    </p>
+                  </div>
+
+                  {purchaseError && (
+                    <div className="text-danger text-sm">{purchaseError}</div>
+                  )}
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={onClose}>
+                  Cancel
+                </Button>
+                <Button
+                  color="primary"
+                  isLoading={purchaseLoading}
+                  onPress={handlePurchaseTicket}
+                >
+                  Proceed to Payment
+                </Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Hero section */}
+      <div className="relative">
+        {event.imagesUrls?.length > 0 ? (
+          <div className="w-full h-64 md:h-96 relative overflow-hidden rounded-lg">
             <Image
-              isBlurred
-              className="h-[50vh]"
-              src={post?.image}
-              alt={post.title}
-              loading="lazy"
+              src={event.imagesUrls[0]}
+              alt={event.title}
+              width="100%"
+              height="100%"
+              className="object-cover w-full h-full"
             />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           </div>
-        </div>}
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-row gap-4 justify-between">
-            <p className="text-2xl md:text-4xl">{post.price}$</p>
-            <div className="flex flex-row gap-4">
-              <Button className="bg-primary" onPress={onOpen}>Buy</Button>
-              <Button onPress={() => handleFollowUnfollow()}>{organization.folow ? "Unfollow the company" : "Follow the company"}</Button>
-            </div>
-          </div>
-          <div className="w-full">
-            <p className="text-gray-500">{post.description}</p>
-          </div>
-          <div className="w-full relative">
-            <div className="absolute top-2 right-2 z-[10] flex bg-white/50 dark:bg-black/50 rounded-md p-2">
-              <Switch isSelected={IsSelectedMap} onValueChange={setIsSelectedMap}><span className="text-black dark:text-white">Color map</span></Switch>
-            </div>
-            <MapContainer center={post.location} scrollWheelZoom={false} zoom={13} className="z-[-10]" style={{ height: "25vh" }}>
-              <TileLayer
-                url={mapUrl}
-              />
-              <Marker position={post.location}>
-                <Popup>
-                  {post.location}
-                </Popup>
-              </Marker>
-            </MapContainer>
-          </div>
-        </div>
-        <Tabs size="lg" className="w-full" defaultSelectedKey="Comments">
-          <Tab key="about_organization" title="About the organization">
-            <div className="flex flex-col gap-4">
-              <p className="text-gray-500">{organization.description}</p>
-              <p className="text-xl md:text-2xl">Other event organization</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {card()}
-              </div>
-            </div>
-          </Tab>
-          <Tab key="visitors" title="Visitors">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {usersCard()}
-            </div>
-          </Tab>
-          <Tab key="comments" title="Comments">
-            <div className="flex flex-col gap-10">
-              <div className="flex flex-col gap-4">
-                {renderComments(commentRes())}
-              </div>
-              <div className="flex flex-col gap-3">
-                <Textarea label="Comment" placeholder="Enter your comment" value={newCommentContent} onValueChange={setNewCommentContent} />
-                <div className="flex items-end justify-start">
-                  <Button>Post</Button>
+        ) : (
+          <div className="w-full h-64 md:h-96 bg-gradient-to-br from-primary-100 to-secondary-100 dark:from-primary-900 dark:to-secondary-900 rounded-lg" />
+        )}
+
+        <div className="container mx-auto px-4 relative -mt-16 z-10">
+          <Card className="p-6 shadow-lg">
+            <div className="flex flex-col gap-4 md:flex-row md:justify-between md:items-center">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold">
+                  {event.title}
+                </h1>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <Chip variant="flat" color="primary">
+                    {event.format}
+                  </Chip>
+                  <Chip variant="flat">{event.theme}</Chip>
                 </div>
               </div>
+
+              <div className="flex flex-col items-end">
+                <span className="text-3xl font-bold">${event.price}</span>
+                {isLoggedIn ? (
+                  <>
+                    {ticketCheckLoading ? (
+                      <Spinner size="sm" />
+                    ) : hasTicket ? (
+                      <div className="flex items-center gap-2 text-success mt-2">
+                        <span>You have a ticket</span>
+                      </div>
+                    ) : (
+                      <Button color="primary" onPress={onOpen} className="mt-2">
+                        Buy Ticket
+                      </Button>
+                    )}
+                  </>
+                ) : (
+                  <Button
+                    color="primary"
+                    onPress={() => navigate("/login")}
+                    className="mt-2"
+                  >
+                    Login to buy ticket
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <section className="flex flex-col gap-10 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2">
+            <h2 className="text-2xl font-bold mb-4">About This Event</h2>
+            <p className="text-gray-600 whitespace-pre-line">
+              {event.description}
+            </p>
+          </div>
+
+          <Card className="p-4 h-fit">
+            <CardBody>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-default-500">Date:</span>
+                  <span className="font-semibold">
+                    {formatDate(event.date)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-default-500">Location:</span>
+                  <span className="font-semibold">{event.location}</span>
+                </div>
+                {event.maxAttendees && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-default-500">Max Attendees:</span>
+                    <span className="font-semibold">{event.maxAttendees}</span>
+                  </div>
+                )}
+                {event._count && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-default-500">Tickets Sold:</span>
+                    <span className="font-semibold">
+                      {event._count.attendees}
+                      {event.maxAttendees ? ` / ${event.maxAttendees}` : ""}
+                    </span>
+                  </div>
+                )}
+                {event.organizer && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-default-500">Organizer:</span>
+                    <span
+                      className="font-semibold cursor-pointer hover:underline"
+                      onClick={() => navigate(`/profile/${event.organizer.id}`)}
+                    >
+                      {event.organizer.name}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </CardBody>
+          </Card>
+        </div>
+
+        {event.coordinates && (
+          <div className="mt-8">
+            <h2 className="text-2xl font-bold mb-4">Location</h2>
+            <div className="relative h-[400px] rounded-lg overflow-hidden">
+              <MapContainer
+                center={[
+                  event.coordinates.latitude,
+                  event.coordinates.longitude,
+                ]}
+                zoom={13}
+                className="h-full"
+              >
+                <TileLayer url={mapUrl} />
+                <Marker
+                  position={[
+                    event.coordinates.latitude,
+                    event.coordinates.longitude,
+                  ]}
+                >
+                  <Popup>{event.location}</Popup>
+                </Marker>
+              </MapContainer>
+            </div>
+          </div>
+        )}
+
+        <Tabs aria-label="Event tabs" className="mt-8">
+          {!event.isAttendeesHidden && (
+            <Tab key="attendees" title="Attendees">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+                {event.attendees && event.attendees.length > 0 ? (
+                  event.attendees.map((attendee) => (
+                    <Card key={attendee.user.id} isPressable className="p-4">
+                      <div className="flex items-center gap-4">
+                        <Avatar
+                          src={attendee.user.avatarUrl || "/default-avatar.png"}
+                        />
+                        <p>{attendee.user.name}</p>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="col-span-full text-center py-8 text-gray-500">
+                    No attendees yet
+                  </div>
+                )}
+              </div>
+            </Tab>
+          )}
+
+          <Tab key="comments" title="Comments">
+            <div className="flex flex-col gap-6 mt-4">
+              {event.comments && renderComments(event.comments)}
+
+              {isLoggedIn ? (
+                <div className="flex flex-col gap-4 mt-4">
+                  <Textarea
+                    label="Add a comment"
+                    placeholder="Write your comment here..."
+                    value={newCommentContent}
+                    onValueChange={setNewCommentContent}
+                  />
+                  <Button
+                    color="primary"
+                    onPress={handleCreateComment}
+                    disabled={!newCommentContent.trim()}
+                  >
+                    Post Comment
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="mb-2">Login to leave comments</p>
+                  <Button
+                    color="primary"
+                    variant="light"
+                    onPress={() => navigate("/login")}
+                  >
+                    Login
+                  </Button>
+                </div>
+              )}
             </div>
           </Tab>
-          <Tab key="relevant" title="Relevant events">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {cardRelevant()}
-            </div>
-          </Tab>
+
+          {event.similarEvents && event.similarEvents.length > 0 && (
+            <Tab key="similar" title="Similar Events">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-4">
+                {event.similarEvents.map((similarEvent) => (
+                  <EventCard key={similarEvent.id} event={similarEvent} />
+                ))}
+              </div>
+            </Tab>
+          )}
+
+          {companyEvents.length > 0 && (
+            <Tab key="companyEvents" title="More from this Company">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-4">
+                {companyEvents.map((companyEvent) => (
+                  <EventCard key={companyEvent.id} event={companyEvent} />
+                ))}
+              </div>
+            </Tab>
+          )}
+
+          {event.Company && (
+            <Tab key="company" title="About Organizer">
+              <div className="mt-4">
+                <Card
+                  className="p-6"
+                  isPressable
+                  onPress={() => navigate(`/company/${event.Company.id}`)}
+                  role="button"
+                >
+                  <CardHeader className="flex gap-4 px-0 pt-0">
+                    {event.Company.logoUrl && (
+                      <Image
+                        src={event.Company.logoUrl}
+                        alt={event.Company.name}
+                        className="w-20 h-20 rounded-lg object-cover"
+                      />
+                    )}
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {event.Company.name}
+                      </h2>
+                      <p className="text-gray-600">{event.Company.email}</p>
+                      {event.Company.location && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          {event.Company.location}
+                        </p>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardBody className="px-0">
+                    <p>{event.Company.description}</p>
+                  </CardBody>
+                  <CardFooter className="px-0 pb-0">
+                    <Button
+                      color="primary"
+                      variant="flat"
+                      size="sm"
+                      onPress={() => navigate(`/company/${event.Company.id}`)}
+                    >
+                      View Company Profile
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </div>
+            </Tab>
+          )}
         </Tabs>
       </section>
     </DefaultLayout>

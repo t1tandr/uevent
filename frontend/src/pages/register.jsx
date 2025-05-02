@@ -10,8 +10,8 @@ import IconGoogle from "../icons/icons8-google.svg?react";
 import { authService } from "../services/auth.service";
 import { useNavigate } from "react-router-dom";
 
-import { useDispatch } from 'react-redux';
-import { login } from '../store/authSlice.js';
+import { useDispatch } from "react-redux";
+import { login } from "../store/authSlice.js";
 
 const schema = z
   .object({
@@ -50,16 +50,18 @@ export default function Register() {
     try {
       setIsLoading(true);
       setError(null);
-
-      // Remove passwordConfirmation before sending to API
-      const { passwordConfirmation, ...registerData } = data;
-
-      const data = await authService.register(registerData);
-      dispatch(login(data));
+      const { passwordConfirmation, ...rest } = data;
+      const response = await authService.register(rest);
+      dispatch(
+        login({
+          ...response,
+          avatarUrl: response.avatarUrl || null,
+        })
+      );
       navigate("/");
     } catch (err) {
       setError(
-        err?.response?.data?.message || "Registration failed. Please try again."
+        err?.response?.data?.message || "Login failed. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -73,7 +75,6 @@ export default function Register() {
     window.location.href = `http://localhost:3000/api/auth/google/login?redirect_uri=${redirectUri}`;
   };
 
-  // Handle Google OAuth callback
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get("accessToken");
@@ -189,10 +190,7 @@ export default function Register() {
               </Form>
 
               <div className="flex flex-col items-center justify-between">
-                <Link
-                  href="/login"
-                  className="text-primary"
-                >
+                <Link href="/login" className="text-primary">
                   Already have an account? Log in
                 </Link>
               </div>

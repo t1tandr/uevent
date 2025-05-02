@@ -42,7 +42,12 @@ export default function Login() {
       setIsLoading(true);
       setError(null);
       const response = await authService.login(data);
-      dispatch(login(response));
+      dispatch(
+        login({
+          ...response,
+          avatarUrl: response.avatarUrl || null,
+        })
+      );
       navigate("/");
     } catch (err) {
       setError(
@@ -57,7 +62,6 @@ export default function Login() {
     window.location.href = "http://localhost:3000/api/auth/google/login";
   };
 
-  // Handle Google OAuth callback
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get("accessToken");

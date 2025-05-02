@@ -1,22 +1,17 @@
 import { Module } from '@nestjs/common'
-import { TicketsService } from './tickets.service'
 import { TicketsController } from './tickets.controller'
-import { PrismaService } from 'src/prisma.service'
+import { TicketsService } from './tickets.service'
 import { PaymentsService } from './payments.service'
-import { MailModule } from 'src/mail/mail.module'
 import { PDFService } from './pdf.service'
-import { NotificationsModule } from 'src/notifications/notifications.module'
+import { MailModule } from '../mail/mail.module'
+import { NotificationsModule } from '../notifications/notifications.module'
+import { ConfigModule } from '@nestjs/config'
+import { PrismaService } from 'src/prisma.service'
 
 @Module({
-	imports: [MailModule, NotificationsModule],
+	imports: [ConfigModule, MailModule, NotificationsModule],
 	controllers: [TicketsController],
-	providers: [
-		TicketsService,
-		PrismaService,
-		PaymentsService,
-		TicketsService,
-		PaymentsService,
-		PDFService
-	]
+	providers: [TicketsService, PaymentsService, PDFService, PrismaService],
+	exports: [TicketsService, PaymentsService, PDFService]
 })
 export class TicketsModule {}

@@ -22,6 +22,23 @@ export class CompaniesService {
 		private mailService: MailService
 	) {}
 
+	async checkEditPermission(companyId: string, userId: string) {
+		const member = await this.prisma.companyMember.findFirst({
+			where: {
+				companyId,
+				userId,
+				role: {
+					in: [CompanyRole.OWNER, CompanyRole.EDITOR]
+				}
+			}
+		})
+
+		return {
+			canEdit: !!member,
+			role: member?.role || null
+		}
+	}
+
 	async getMyCompanies(userId: string) {
 		const members = await this.prisma.companyMember.findMany({
 			where: {

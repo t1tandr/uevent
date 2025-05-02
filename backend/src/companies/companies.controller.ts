@@ -40,6 +40,15 @@ export class CompaniesController {
 		return this.companiesService.getMyCompanies(userId)
 	}
 
+	@Get(':id/can-edit')
+	@AuthGuard()
+	async checkEditPermission(
+		@Param('id') companyId: string,
+		@CurrentUser('id') userId: string
+	) {
+		return this.companiesService.checkEditPermission(companyId, userId)
+	}
+
 	@Get(':id')
 	@AuthGuard()
 	async getCompanyById(

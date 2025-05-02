@@ -14,8 +14,31 @@ import EditEventPage from "./pages/editEvent.jsx";
 import OtherProfilePage from "./pages/profileOther.jsx";
 import Error from "./pages/404.jsx";
 import CompanyPage from "./pages/company.jsx";
+import PaymentSuccess from "./pages/payment-success.jsx";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { login } from "./store/authSlice";
+import { getAccessToken } from "./services/auth-token.service";
+import { authService } from "./services/auth.service";
 
 function App() {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const initializeAuth = async () => {
+      const token = getAccessToken();
+      if (token) {
+        try {
+          const userData = await authService.getProfile();
+          dispatch(login(userData.data));
+        } catch (error) {
+          console.error("Failed to fetch user data:", error);
+        }
+      }
+    };
+
+    initializeAuth();
+  }, [dispatch]);
   return (
     <Routes>
       <Route element={<Login />} path="/login" />
@@ -30,6 +53,7 @@ function App() {
       <Route element={<OtherProfilePage />} path="/profile/:id" />
       <Route element={<CompanyPage />} path="/company/:id" />
       <Route element={<Error />} path="*" />
+      <Route element={<PaymentSuccess />} path="/payment/success" />
     </Routes>
   );
 }

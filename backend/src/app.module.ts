@@ -8,9 +8,10 @@ import { CompaniesModule } from './companies/companies.module'
 import { MailModule } from './mail/mail.module'
 import { BullModule } from '@nestjs/bull'
 import { NotificationsModule } from './notifications/notifications.module'
-import { TicketsModule } from './tickets/tickets.module';
-import { FiltersModule } from './filters/filters.module';
-import { CommentsModule } from './comments/comments.module';
+import { TicketsModule } from './tickets/tickets.module'
+import { FiltersModule } from './filters/filters.module'
+import { CommentsModule } from './comments/comments.module'
+import { SubscribersModule } from './subscribers/subscribers.module'
 
 @Module({
 	imports: [
@@ -33,7 +34,8 @@ import { CommentsModule } from './comments/comments.module';
 		NotificationsModule,
 		TicketsModule,
 		FiltersModule,
-		CommentsModule
+		CommentsModule,
+		SubscribersModule
 	]
 })
 export class AppModule {}

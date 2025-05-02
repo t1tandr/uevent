@@ -23,6 +23,10 @@ export const companiesService = {
     });
   },
 
+  async checkEditPermission(companyId) {
+    return axiosWithAuth.get(`/companies/${companyId}/can-edit`);
+  },
+
   async getCompanyEvents(companyId, { status, search } = {}) {
     return axiosClassic.get(`/companies/${companyId}/events`, {
       params: { status, search },

@@ -1,30 +1,34 @@
 import { axiosWithAuth } from "../api/interceptors";
 
 export const ticketsService = {
-  async createTicket(data) {
-    const response = await axiosWithAuth.post("/tickets", data);
-    return response.data;
+  async initiateTicketPurchase(eventId, promoCode) {
+    try {
+      const { data } = await axiosWithAuth.post("/tickets/checkout", {
+        eventId,
+        promoCode: promoCode || undefined,
+      });
+      return data;
+    } catch (error) {
+      console.error("Checkout error:", error.response?.data || error);
+      throw error;
+    }
+  },
+
+  async confirmPayment(sessionId) {
+    const { data } = await axiosWithAuth.post("/tickets/confirm", {
+      sessionId,
+    });
+    return data;
+  },
+
+  async checkEventTicket(eventId) {
+    const { data } = await axiosWithAuth.get(`/tickets/check/${eventId}`);
+    return data.hasTicket;
   },
 
   async getUserTickets() {
-    const response = await axiosWithAuth.get("/tickets");
-    return response.data;
-  },
-
-  async downloadTicketPDF(ticketId) {
-    const response = await axiosWithAuth.get(`/tickets/${ticketId}/pdf`, {
-      responseType: "blob",
-    });
-
-    // Create blob URL and trigger download
-    const blob = new Blob([response.data], { type: "application/pdf" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `ticket-${ticketId}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    const { data } = await axiosWithAuth.get("/tickets");
+    console.log("Получены билеты:", data);
+    return data;
   },
 };

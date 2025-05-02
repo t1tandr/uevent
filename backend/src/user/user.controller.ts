@@ -42,6 +42,7 @@ export class UserController {
 	}
 
 	@Post('update-avatar')
+	@AuthGuard()
 	@UseInterceptors(FileInterceptor('file'))
 	async updateAvatar(
 		@CurrentUser('id') userId: string,

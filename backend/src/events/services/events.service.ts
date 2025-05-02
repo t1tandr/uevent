@@ -104,17 +104,43 @@ export class EventsService {
 		}
 
 		return this.prisma.$transaction(async tx => {
-			const event = await tx.event.create({
-				data: {
-					...dto,
-					imagesUrls,
-					organizerId: userId,
-					promoCodes: dto.promoCodes
+			let parsedPromoCodes
+			try {
+				parsedPromoCodes =
+					typeof dto.promoCodes === 'string'
+						? JSON.parse(dto.promoCodes)
+						: dto.promoCodes
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars
+			} catch (error) {
+				parsedPromoCodes = undefined
+			}
+			const eventData = {
+				...dto,
+				price: parseFloat(dto.price as any),
+				maxAttendees: dto.maxAttendees
+					? parseInt(dto.maxAttendees as any)
+					: undefined,
+				isAttendeesHidden: Boolean(dto.isAttendeesHidden),
+				notifyOrganizer: Boolean(dto.notifyOrganizer),
+				date: new Date(dto.date).toISOString(),
+				publishDate: dto.publishDate
+					? new Date(dto.publishDate).toISOString()
+					: undefined,
+				imagesUrls,
+				organizerId: userId,
+				promoCodes:
+					Array.isArray(parsedPromoCodes) && parsedPromoCodes.length > 0
 						? {
-								create: dto.promoCodes
+								create: parsedPromoCodes.map(promo => ({
+									code: String(promo.code),
+									discount: Number(promo.discount)
+								}))
 							}
 						: undefined
-				},
+			}
+
+			const event = await tx.event.create({
+				data: eventData,
 				include: {
 					organizer: true,
 					Category: true,
@@ -127,6 +153,20 @@ export class EventsService {
 					event.id,
 					new Date(dto.publishDate)
 				)
+			}
+
+			if (
+				!dto.publishDate &&
+				dto.companyId &&
+				event.status === EventStatus.PUBLISHED
+			) {
+				setTimeout(() => {
+					this.notificationsService
+						.createNewEventNotification(event.id)
+						.catch(error =>
+							console.error('Error sending notifications:', error)
+						)
+				}, 0)
 			}
 
 			return event
@@ -258,13 +298,6 @@ export class EventsService {
 		const event = await this.prisma.event.findUnique({
 			where: { id },
 			include: {
-				organizer: {
-					select: {
-						id: true,
-						name: true,
-						avatarUrl: true
-					}
-				},
 				attendees: {
 					include: {
 						user: {
@@ -296,7 +329,6 @@ export class EventsService {
 			throw new NotFoundException('Event not found')
 		}
 
-		// Transform attendees to match EventDetails type
 		const transformedEvent = {
 			...event,
 			attendees: event.attendees.map(ticket => ({
